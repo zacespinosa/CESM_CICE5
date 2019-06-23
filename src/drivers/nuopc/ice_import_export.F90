@@ -134,7 +134,8 @@ contains
     call fldlist_add(fldsToIce_num, fldsToIce, 's_surf'                  )
     call fldlist_add(fldsToIce_num, fldsToIce, 'ocn_current_zonal'       )
     call fldlist_add(fldsToIce_num, fldsToIce, 'ocn_current_merid'       )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'freezing_melting_potential'                  )
+    call fldlist_add(fldsToIce_num, fldsToIce, 'freezing_melting_potential')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum', ungridded_lbound=1, ungridded_ubound=25) !TODO: generalize
     if (flds_wiso) then
        call fldlist_add(fldsToIce_num, fldsToIce, 'So_roce_wiso', ungridded_lbound=1, ungridded_ubound=3)
     end if
@@ -441,6 +442,26 @@ contains
     deallocate(aflds)
     allocate(aflds(nx_block,ny_block,nfldv,nblocks))
     aflds = c0
+
+    ! import wave elevation spectrum ??? TODO: fill this in
+
+    call state_getimport(importState, 'wave_elevation_spectrum', output=???, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    n=0
+    do iblk = 1, nblocks
+       this_block = get_block(blocks_ice(iblk),iblk)
+       ilo = this_block%ilo
+       ihi = this_block%ihi
+       jlo = this_block%jlo
+       jhi = this_block%jhi
+       do j = jlo, jhi
+          do i = ilo, ihi
+             n = n+1
+             do k = 1,25
+                output(i,j,k,iblk)  = dataPtr2d(ungridded_index,n)
+          end do
+       end do
+    end do
 
     ! Get velocity fields from ocean and atm and slope fields from ocean
 
