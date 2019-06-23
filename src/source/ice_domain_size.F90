@@ -18,6 +18,7 @@
 
       implicit none
       private
+      save  ! CMB
 
       integer (kind=int_kind), parameter, public :: &
         nx_global = NXGLOB    , & ! i-axis size
@@ -34,6 +35,9 @@
         nblyr     = NBGCLYR   , & ! number of bio/brine layers per category
         max_nbtrcr=   9       , & ! maximum number of biology tracers
 !        nltrcr    = max_nbtrcr*TRBRI, & ! maximum layer bgc tracers (for zbgc)
+!liuxy
+        nfsd    = 24      , & !number of floe size categories, LR hardwired for NEMO-CICE
+!liuxy
 
         max_ntrcr =   1         & ! 1 = surface temperature              
                   + nilyr       & ! ice salinity
@@ -45,6 +49,7 @@
                   + TRLVL*2     & ! level/deformed ice
                   + TRPND*3     & ! ponds
                   + n_aero*4    & ! number of aerosols * 4 aero layers
+                  + nfsd        & ! number of floes in floe-size distribution  CMB
                   + n_iso*4     & ! number of isotopes * 4 isotope layers
                   + TRBRI       & ! brine height
                   + TRBGCS    , & ! skeletal layer BGC

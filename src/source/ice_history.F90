@@ -58,7 +58,7 @@
       use ice_broadcast, only: broadcast_scalar, broadcast_array
       use ice_communicate, only: my_task, master_task
       use ice_constants, only: c0, c1, c2, c100, mps_to_cmpdy, rhofresh, &
-          kg_to_g, secday
+          Tffresh, kg_to_g, secday
       use ice_calendar, only: yday, days_per_year, histfreq, &
           histfreq_n, nstreams
       use ice_domain_size, only: max_blocks, max_nstrm
@@ -76,6 +76,16 @@
       use ice_restart_shared, only: restart
       use ice_state, only: tr_iage, tr_FY, tr_lvl, tr_pond, tr_aero, tr_brine
       use ice_zbgc_shared, only: skl_bgc
+! LR liuxy
+      use ice_state, only: tr_fsd ! LR
+      use ice_domain_size, only: nfsd ! liuxy
+      use ice_fsd, only: write_diag_diff, write_diag_wave 
+      use ice_wavefracspec, only: wave_spec
+ 
+      integer (kind=int_kind) :: k !liuxy
+      character*2 ck ! liuxy
+
+! LR liuxy
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step
@@ -144,7 +154,86 @@
          f_dagedtd = 'x'
       endif
       if (.not. tr_FY)   f_FY   = 'x'
+! LR
+      ! FSD history output is only required if we have defined a FSD
+      if (.not. tr_fsd) then 
+        f_areal_fstd = 'x'
+        f_areal_fsd  = 'x'
+        f_gradial = 'x'
+        f_dafsdmrg = 'x'
+        f_dafsdwave ='x'
+        f_dafsdani = 'x'
+        f_dafsdlatm = 'x'
+        f_dafsdlatg = 'x'
+        f_danlatg   = 'x'
+        f_damfstdmrg = 'x'
+        f_damfstdwave ='x'
+        f_damfstdani = 'x'
+        f_damfstdlatm = 'x'
+        f_damfstdlatg = 'x'
+        f_areal_mfstd_tilda = 'x'
+        f_leadarea  = 'x'
+        f_latsurfarea = 'x'
+        f_vlateral = 'x'
+        f_nearest_wave_hs = 'x'
+        f_nearest_wave_tz = 'x'
+        f_cml_nfloes = 'x'
+        f_hm = 'x'
+        f_nfloes = 'x'
+        f_concforww = 'x'
+        f_diamforww = 'x'
+        f_thickforww = 'x'
+        f_wavespectrum='x'
+        f_wave_hs = 'x'
+        f_wave_tz = 'x'
+        f_wave_search_i = 'x'
+        f_wave_search_j = 'x'
+        f_ice_search_i = 'x'
+        f_ice_search_j = 'x'
+      end if  
 
+      if (wave_spec) then
+        f_wavespectrum=''
+        f_wave_hs = 'x'
+        f_wave_tz = 'x'
+        f_wave_search_i = 'x'
+        f_wave_search_j = 'x'
+        f_ice_search_i = 'x'
+        f_ice_search_j = 'x'
+        f_nearest_wave_hs = 'x'
+        f_nearest_wave_tz = 'x'
+        f_cml_nfloes = 'x'
+        f_nfloes = 'x'
+      else
+        f_concforww = 'x'
+        f_diamforww = 'x'
+        f_wavespectrum='x'
+        f_thickforww = 'x'        
+      end if   
+
+      if (.not. write_diag_wave) then
+        f_wave_search_i = 'x'
+        f_wave_search_j = 'x'
+        f_ice_search_i = 'x'
+        f_ice_search_j = 'x'
+      end if
+
+      if (.not. write_diag_diff) then
+        f_damfstdmrg = 'x'
+        f_damfstdwave ='x'
+        f_damfstdani = 'x'
+        f_damfstdlatm = 'x'
+        f_damfstdlatg = 'x'
+        f_dafsdmrg = 'x'
+        f_dafsdwave ='x'
+        f_dafsdani = 'x'
+        f_dafsdlatm = 'x'
+        f_dafsdlatg = 'x'
+        f_danlatg = 'x'
+        f_danlatm = 'x'
+        f_danani = 'x'
+      end if
+! LR 
       if (kdyn /= 2) then
            f_a11       = 'x'
            f_a12       = 'x'
@@ -173,106 +262,77 @@
       ! Turn on all CMIP fields in one go.
 
       if (f_CMIP(1:1) /= 'x') then
-         f_sithick = 'mxxxx'
-         f_sisnthick = 'mxxxx'
-         f_siage = 'mxxxx'
-         f_sitemptop = 'mxxxx'
-         f_sitempsnic = 'mxxxx'
-         f_sitempbot = 'mxxxx'
-         f_sispeed = 'mxxxx'
-         f_siu = 'mxxxx'
-         f_siv = 'mxxxx'
-         f_sidmasstranx = 'mxxxx'
-         f_sidmasstrany = 'mxxxx'
-         f_sistrxdtop = 'mxxxx'
-         f_sistrydtop = 'mxxxx'
-         f_sistrxubot = 'mxxxx'
-         f_sistryubot = 'mxxxx'
-         f_sicompstren = 'mxxxx'
-         f_sialb = 'mxxxx'
-         f_sihc = 'mxxxx'
-         f_sisnhc = 'mxxxx'
-         f_sidconcth = 'mxxxx'
-         f_sidconcdyn = 'mxxxx'
-         f_sidmassth = 'mxxxx'
-         f_sidmassdyn = 'mxxxx'
-         f_sidmassgrowthwat = 'mxxxx'
-         f_sidmassgrowthbot = 'mxxxx'
-         f_sidmasssi = 'mxxxx'
-         f_sidmassevapsubl = 'mxxxx'
-         f_sndmasssubl = 'mxxxx'
-         f_sidmassmelttop = 'mxxxx'
-         f_sidmassmeltbot = 'mxxxx'
-         f_sidmasslat = 'mxxxx'
-         f_sndmasssnf = 'mxxxx'
-         f_sndmassmelt = 'mxxxx'
-         f_siflswdtop = 'mxxxx'
-         f_siflswutop = 'mxxxx'
-         f_siflswdbot = 'mxxxx'
-         f_sifllwdtop = 'mxxxx'
-         f_sifllwutop = 'mxxxx'
-         f_siflsenstop = 'mxxxx'
-         f_siflsensupbot = 'mxxxx'
-         f_sifllatstop = 'mxxxx'
-         f_siflcondtop = 'mxxxx'
-         f_siflcondbot = 'mxxxx'
-         f_sipr = 'mxxxx'
-         f_sifb = 'mxxxx'
-         f_siflsaltbot = 'mxxxx'
-         f_siflfwbot = 'mxxxx'
-         f_siflfwdrain = 'mxxxx'
-         f_siforcetiltx = 'mxxxx'
-         f_siforcetilty = 'mxxxx'
-         f_siforcecoriolx = 'mxxxx'
-         f_siforcecorioly = 'mxxxx'
-         f_siforceintstrx = 'mxxxx'
-         f_siforceintstry = 'mxxxx'
-         f_sidragtop = 'mxxxx'
-         f_sistreave = 'mxxxx'
-         f_sistremax = 'mxxxx'
-         f_sirdgthick = 'mxxxx'
-         f_siitdconc = 'mxxxx'
-         f_siitdthick = 'mxxxx'
-         f_siitdsnthick = 'mxxxx'
-
-         ! Turn off CICE duplicates
-         f_iage = 'xxxxx'
-         f_snoice = 'xxxxx'
-         f_strength = 'xxxxx'
-         f_divu = 'xxxxx'
-         f_flat = 'xxxxx'
-         f_flat_ai = 'xxxxx'
-         f_flwdn = 'xxxxx'
-         f_flwup = 'xxxxx'
-         f_fsens = 'xxxxx'
-         f_fsens_ai = 'xxxxx'
-         f_fhocn = 'xxxxx'
-         f_fhocn_ai = 'xxxxx'
-         f_fswup = 'xxxxx'
-         f_strintx = 'xxxxx'
-         f_strinty = 'xxxxx'
-         f_strcorx = 'xxxxx'
-         f_strcory = 'xxxxx'
-         f_strtltx = 'xxxxx'
-         f_strtlty = 'xxxxx'
-         f_strairx = 'xxxxx'
-         f_strairy = 'xxxxx'
-         f_strocnx = 'xxxxx'
-         f_strocny = 'xxxxx'
-         f_rain = 'xxxxx'
-         f_snow = 'xxxxx'
-         f_shear = 'xxxxx'
-         f_Tsfc = 'xxxxx'
-         f_uvel = 'xxxxx'
-         f_vvel = 'xxxxx'
-         f_sig1 = 'xxxxx'
-         f_sig2 = 'xxxxx'
-         f_vicen = 'xxxxx'
-         f_vsnon = 'xxxxx'
-         f_fswsfcn = 'xxxxx'
-         f_fswintn = 'xxxxx'
-         f_fswthrun = 'xxxxx'
-
+         f_sithick = f_CMIP
+         f_sisnthick = f_CMIP
+         f_siage = f_CMIP
+         f_sitemptop = f_CMIP
+         f_sitempsnic = f_CMIP
+         f_sitempbot = f_CMIP
+         f_sispeed = f_CMIP
+         f_siu = f_CMIP
+         f_siv = f_CMIP
+         f_sidmasstranx = f_CMIP
+         f_sidmasstrany = f_CMIP
+         f_sistrxdtop = f_CMIP
+         f_sistrydtop = f_CMIP
+         f_sistrxubot = f_CMIP
+         f_sistryubot = f_CMIP
+         f_sicompstren = f_CMIP
+         f_sialb = f_CMIP
+         f_sihc = f_CMIP
+         f_sisnhc = f_CMIP
+         f_sidconcth = f_CMIP
+         f_sidconcdyn = f_CMIP
+         f_sidmassth = f_CMIP
+         f_sidmassdyn = f_CMIP
+         f_sidmassevapsubl = f_CMIP
+         f_sndmasssnf = f_CMIP
+         f_siflswdtop = f_CMIP
+         f_siflswutop = f_CMIP
+         f_siflswdbot = f_CMIP
+         f_sifllwdtop = f_CMIP
+         f_sifllwutop = f_CMIP
+         f_siflsenstop = f_CMIP
+         f_siflsensupbot = f_CMIP
+         f_sifllatstop = f_CMIP
+         f_siflcondtop = f_CMIP
+         f_siflcondbot = f_CMIP
+         f_sipr = f_CMIP
+         f_sifb = f_CMIP
+         f_siflsaltbot = f_CMIP
+         f_siflfwbot = f_CMIP
+         f_siflfwdrain = f_CMIP
+         f_siforcetiltx = f_CMIP
+         f_siforcetilty = f_CMIP
+         f_siforcecoriolx = f_CMIP
+         f_siforcecorioly = f_CMIP
+         f_siforceintstrx = f_CMIP
+         f_siforceintstry = f_CMIP
+         f_siitdconc = f_CMIP
+         f_siitdthick = f_CMIP
+         f_siitdsnthick = f_CMIP
+         f_sidragtop = f_CMIP
+         f_sistreave = f_CMIP
+         f_sistremax = f_CMIP
+         f_sirdgthick = f_CMIP
+         f_aice = f_CMIP
+         f_hi = f_CMIP
+         f_hs = f_CMIP
+         f_divu = f_CMIP
+         f_icepresent = f_CMIP
+         f_shear = f_CMIP
+         f_dvidtd = f_CMIP
+         f_dvidtt = f_CMIP
+         f_congel = f_CMIP
+         f_frazil = f_CMIP
+         f_meltl = f_CMIP
+         f_meltb = f_CMIP
+         f_meltt = f_CMIP
+         f_melts = f_CMIP
+         f_snoice = f_CMIP
+         f_aicen = f_CMIP
+         f_vicen = f_CMIP
+         f_vsnon = f_CMIP
       endif
 
       if (f_CMIP(2:2) == 'd') then
@@ -314,8 +374,46 @@
       call broadcast_scalar (f_VGRDi, master_task)
       call broadcast_scalar (f_VGRDs, master_task)
       call broadcast_scalar (f_VGRDb, master_task)
-
+      call broadcast_scalar (f_NFSD, master_task)
 !     call broadcast_scalar (f_example, master_task)
+      call broadcast_scalar (f_fbottom, master_task)
+      call broadcast_scalar (f_gradial, master_task)
+      call broadcast_scalar (f_flateral, master_task)
+      call broadcast_scalar (f_vlateral, master_task)
+      call broadcast_scalar (f_leadarea, master_task)
+      call broadcast_scalar (f_latsurfarea, master_task)
+      call broadcast_scalar (f_concforww, master_task)
+      call broadcast_scalar (f_diamforww, master_task)
+      call broadcast_scalar (f_thickforww, master_task)
+      call broadcast_scalar (f_wavespectrum, master_task)
+      call broadcast_scalar (f_wave_hs, master_task)
+      call broadcast_scalar (f_wave_tz, master_task)
+      call broadcast_scalar (f_nearest_wave_hs, master_task)
+      call broadcast_scalar (f_nearest_wave_tz, master_task)      
+      call broadcast_scalar (f_cml_nfloes, master_task)
+      call broadcast_scalar (f_hm, master_task)
+      call broadcast_scalar (f_nfloes, master_task)
+      call broadcast_scalar (f_wave_search_i, master_task)
+      call broadcast_scalar (f_wave_search_j, master_task)
+      call broadcast_scalar (f_ice_search_i, master_task)
+      call broadcast_scalar (f_ice_search_j, master_task)
+      call broadcast_scalar (f_areal_fsd, master_task)
+      call broadcast_scalar (f_areal_fstd, master_task)
+      call broadcast_scalar (f_areal_mfstd_tilda, master_task)
+      call broadcast_scalar (f_dafsdani, master_task)
+      call broadcast_scalar (f_dafsdlatm, master_task)
+      call broadcast_scalar (f_dafsdwave, master_task)
+      call broadcast_scalar (f_dafsdmrg, master_task)
+      call broadcast_scalar (f_dafsdlatg, master_task)
+      call broadcast_scalar (f_damfstdani, master_task)
+      call broadcast_scalar (f_damfstdlatm, master_task)
+      call broadcast_scalar (f_damfstdwave, master_task)
+      call broadcast_scalar (f_damfstdmrg, master_task)
+      call broadcast_scalar (f_damfstdlatg, master_task)
+      call broadcast_scalar (f_danani, master_task)
+      call broadcast_scalar (f_danlatm, master_task)
+      call broadcast_scalar (f_danlatg, master_task)
+! LR
       call broadcast_scalar (f_hi, master_task)
       call broadcast_scalar (f_hs, master_task)
       call broadcast_scalar (f_snowfrac, master_task)
@@ -518,7 +616,114 @@
 !            "ice volume per unit grid cell area", c1, c0,            &
 !            ns1, f_example)
 !!!!! end example
+! LR    
+        call define_hist_field(n_wavespectrum,"wave_ef","1",tstr2D, tcstr, & 
+              "snap E(f) - first cat",    &
+              "Snapshot",        &
+               c1, c0, ns1, f_wavespectrum)
 
+         call define_hist_field(n_fbottom,"fbottom","W/m^2",tstr2D, tcstr, &
+             "flux that goes to bottom melt/growth",                   &
+             "if >0, new ice forms; if <0, ice melts", c1, c0,         &
+             ns1, f_fbottom)
+       
+         call define_hist_field(n_flateral,"flateral","W/m^2",tstr2D, tcstr, &
+             "flux that goes to lateral melt/growth",                  &
+             "if >0, new ice forms; if <0, ice melts", c1, c0,         &
+             ns1, f_flateral)
+ 
+        call define_hist_field(n_vlateral,"lateral","cm/day",tstr2D, tcstr, &
+             "lateral ice growth",                                       &
+             "none", mps_to_cmpdy/dt, c0,                               &
+             ns1, f_vlateral)
+ 
+        call define_hist_field(n_gradial,"gradial","m/s",tstr2D, tcstr, &
+             "rate of lateral ice growth/melt",                         &
+             "none", c1, c0,                               &
+             ns1, f_gradial)
+ 
+         call define_hist_field(n_leadarea,"lead_area","1",tstr2D, tcstr, &
+             "fractional area of grid cell covered by lead region",      &
+             "defined as per Horvat & Tziperman (2015)", c1, c0,         &
+             ns1, f_leadarea)
+ 
+         call define_hist_field(n_latsurfarea,"latsurf_area","1",tstr2D, tcstr, &
+             "total area of lateral sides of floes (fractional area)",      &
+             "defined as per Horvat & Tziperman (2015)", c1, c0,         &
+             ns1, f_latsurfarea)
+
+         call define_hist_field(n_wave_hs,"wave_hs","m",tstr2D, tcstr, &
+             "significant height of wind and swell waves",  &
+             "from wave forcing", c1, c0,         &
+             ns1, f_wave_hs)
+        
+         call define_hist_field(n_wave_tz,"wave_tz","s",tstr2D, tcstr, &
+             "second moment mean wave period",                  &
+             "from wave forcing", c1, c0,         &
+             ns1, f_wave_tz)
+
+        call define_hist_field(n_nearest_wave_hs,"nearest_wave_hs","m",tstr2D, tcstr, &
+         "nearest significant height of wind and swell waves",&
+             "from nearest wave", c1, c0,         &
+             ns1, f_nearest_wave_hs)
+        
+         call define_hist_field(n_nearest_wave_tz,"nearest_wave_tz","s",tstr2D, tcstr, &
+             "nearest second moment mean wave period",     &
+             "from nearest wave", c1, c0,         &
+             ns1, f_nearest_wave_tz)
+
+         call define_hist_field(n_cml_nfloes,"cml_nfloes","1",tstr2D, tcstr, &
+             "avg. no floes to nearest wave",                  &
+             " ", c1, c0,         &
+             ns1, f_cml_nfloes)
+
+         call define_hist_field(n_hm,"land_mask","1",tstr2D, tcstr, &
+             "land mask",                  &
+             " ", c1, c0,         &
+             ns1, f_hm)
+
+         call define_hist_field(n_concforww,"concforww","1",tstr2D, tcstr, &
+             "Concentration of floes > Dmin",                  &
+             " ", c1, c0,         &
+             ns1, f_concforww)
+
+         call define_hist_field(n_diamforww,"diamforww","1",tstr2D, tcstr, &
+             "Average (number) diameter of floes > Dmin",                  &
+             " ", c1, c0,         &
+             ns1, f_diamforww)
+
+         call define_hist_field(n_thickforww,"thickforww","m",tstr2D, tcstr, &
+             "Thickness of floes > Dmin",                  &
+             " ", c1, c0,         &
+             ns1, f_thickforww)
+
+         call define_hist_field(n_nfloes,"nfloes","1",tstr2D, tcstr, &
+             "avg. no floes in grid cell",                  &
+             " ", c1, c0,         &
+             ns1, f_nfloes)
+
+        call define_hist_field(n_wave_search_i,"wave_search_i","deg",tstr2D, tcstr, &
+             "global i index of nearest wave (snapshot)",                  &
+             " ", c1, c0,         &
+             ns1, f_wave_search_i)
+
+         call define_hist_field(n_wave_search_j,"wave_search_j","deg",tstr2D, tcstr, &
+             "global j index of nearest wave (snapshot)",                  &
+             " ", c1, c0,         &
+             ns1, f_wave_search_j)
+
+         call define_hist_field(n_ice_search_i,"ice_search_i","deg",tstr2D, tcstr, &
+             "global i index of ice (snapshot)",                  &
+             " ", c1, c0,         &
+             ns1, f_ice_search_i)
+
+         call define_hist_field(n_ice_search_j,"ice_search_j","deg",tstr2D, tcstr, &
+             "global j index of ice (snapshot)",                  &
+             " ", c1, c0,         &
+             ns1, f_ice_search_j)
+
+
+! LR
          call define_hist_field(n_hi,"hi","m",tstr2D, tcstr,        & 
             "grid cell mean ice thickness",                       &
             "ice volume per unit grid cell area", c1, c0,         &
@@ -534,7 +739,7 @@
              "snow fraction per unit grid cell area", c1, c0,       &
              ns1, f_snowfrac)
 
-         call define_hist_field(n_Tsfc,"Tsfc","Celsius",tstr2D, tcstr,    &
+         call define_hist_field(n_Tsfc,"Tsfc","C",tstr2D, tcstr,    &
              "snow/ice surface temperature",                      &
              "averaged with Tf if no ice is present", c1, c0,     &
              ns1, f_Tsfc)
@@ -604,7 +809,7 @@
              "weighted by ice area", mps_to_cmpdy/rhofresh, c0,           &
              ns1, f_rain_ai)
       
-         call define_hist_field(n_sst,"sst","Celsius",tstr2D, tcstr, &
+         call define_hist_field(n_sst,"sst","C",tstr2D, tcstr, &
              "sea surface temperature",                      &
              "none", c1, c0,                                 &
              ns1, f_sst)
@@ -754,14 +959,14 @@
              "weighted by ice area", mps_to_cmpdy/rhofresh, c0,           &
              ns1, f_evap_ai)
       
-         call define_hist_field(n_Tair,"Tair","K",tstr2D, tcstr, &
+         call define_hist_field(n_Tair,"Tair","C",tstr2D, tcstr, &
              "air temperature",                                &
-             "none", c1, c0,                             &
+             "none", c1, -Tffresh,                             &
              ns1, f_Tair)
       
-         call define_hist_field(n_Tref,"Tref","K",tstr2D, tcstr, &
+         call define_hist_field(n_Tref,"Tref","C",tstr2D, tcstr, &
              "2m reference temperature",                       &
-             "none", c1, c0,                             &
+             "none", c1, -Tffresh,                             &
              ns1, f_Tref)
       
          call define_hist_field(n_Qref,"Qref","g/kg",tstr2D, tcstr, &
@@ -820,14 +1025,14 @@
              "weighted by ice area", mps_to_cmpdy/rhofresh, c0,             &
              ns1, f_fresh_ai)
       
-         call define_hist_field(n_fsalt,"fsalt","kg/m2/day",tstr2D, tcstr, &
+         call define_hist_field(n_fsalt,"fsalt","kg/m2/s",tstr2D, tcstr, &
              "salt flux ice to ocn (cpl)",                              &
-             "if positive, ocean gains salt", secday, c0,                   &
+             "if positive, ocean gains salt", c1, c0,                   &
              ns1, f_fsalt)
       
-         call define_hist_field(n_fsalt_ai,"fsalt_ai","kg/m2/day",tstr2D, tcstr, &
+         call define_hist_field(n_fsalt_ai,"fsalt_ai","kg/m2/s",tstr2D, tcstr, &
              "salt flux ice to ocean",                                        &
-             "weighted by ice area", secday, c0,                                  &
+             "weighted by ice area", c1, c0,                                  &
              ns1, f_fsalt_ai)
       
          call define_hist_field(n_fhocn,"fhocn","W/m2",tstr2D, tcstr, &
@@ -1087,17 +1292,17 @@
              "snow volume divided by area", c1, c0,                                      &
              ns1, f_sisnthick)
       
-         call define_hist_field(n_sitemptop,"sitemptop","K",tstr2D, tcstr,    &
+         call define_hist_field(n_sitemptop,"sitemptop","C",tstr2D, tcstr,    &
              "sea ice surface temperature",                             &
              "none", c1, c0,           &
              ns1, f_sitemptop)
       
-         call define_hist_field(n_sitempsnic,"sitempsnic","K",tstr2D, tcstr,    &
+         call define_hist_field(n_sitempsnic,"sitempsnic","C",tstr2D, tcstr,    &
              "snow ice interface temperature",                             &
              "surface temperature when no snow present", c1, c0,           &
              ns1, f_sitempsnic)
       
-         call define_hist_field(n_sitempbot,"sitempbot","K",tstr2D, tcstr,    &
+         call define_hist_field(n_sitempbot,"sitempbot","C",tstr2D, tcstr,    &
              "sea ice bottom temperature",                             &
              "none", c1, c0,           &
              ns1, f_sitempbot)
@@ -1142,7 +1347,7 @@
              "none", c1, c0,         &
              ns1, f_sistryubot)
       
-         call define_hist_field(n_sicompstren,"sicompstren","N m-1",tstr2D, tcstr,  &
+         call define_hist_field(n_sicompstren,"sicompstren","N m-2",ustr2D, ucstr,  &
              "compressive sea ice strength",                      &
              "none", c1, c0,         &
              ns1, f_sicompstren)
@@ -1388,7 +1593,20 @@
            call define_hist_field(n_aicen,"aicen","1",tstr3Dc, tcstr, & 
               "ice area, categories","none", c1, c0,                  &            
               ns1, f_aicen)
-
+! LR
+           call define_hist_field(n_danani,"danani","1",tstr3Dc, tcstr, & 
+              "Change in aicen -ani",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_danani)
+           call define_hist_field(n_danlatm,"danlatm","1",tstr3Dc, tcstr, & 
+              "Change in aicen -latm", &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_danlatm)
+           call define_hist_field(n_danlatg,"danlatg","1",tstr3Dc, tcstr, & 
+              "Change in aicen -3",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_danlatg)
+! LR
            call define_hist_field(n_vicen,"vicen","m",tstr3Dc, tcstr, & 
               "ice volume, categories","none", c1, c0,                &            
               ns1, f_vicen)
@@ -1413,6 +1631,18 @@
              "category mean snow fraction",                     &
              "snow fraction per unit grid cell area", c1, c0,       &
               ns1, f_snowfracn)
+
+           call define_hist_field(n_siitdconc,"siitdconc","1",tstr3Dc, tcstr, & 
+              "ice area, categories","none", c1, c0,                  &            
+              ns1, f_siitdconc)
+
+           call define_hist_field(n_siitdthick,"siitdthick","m",tstr3Dc, tcstr, & 
+              "ice thickness, categories","none", c1, c0,                  &            
+              ns1, f_siitdthick)
+
+           call define_hist_field(n_siitdsnthick,"siitdsnthick","m",tstr3Dc, tcstr, & 
+              "snow thickness, categories","none", c1, c0,                  &            
+              ns1, f_siitdsnthick)
 
            call define_hist_field(n_fsurfn_ai,"fsurfn_ai","W/m2",tstr3Dc, tcstr, & 
               "net surface heat flux, categories","weighted by ice area", c1, c0, &            
@@ -1480,6 +1710,40 @@
 
 !      endif ! if (histfreq(ns1) /= 'x') then
 !      enddo ! ns1 
+! LR
+      do ns1 = 1, nstreams
+      if (histfreq(ns1) /= 'x') then
+
+          call define_hist_field(n_areal_fsd,"areal_fsd", &
+               "1",tstr3Df, tcstr, & 
+              "areal floe size distribution",    &
+              "per unit bin width ",c1,c0, &
+              ns1, f_areal_fsd)
+
+           call define_hist_field(n_dafsdani,"dafsdani","1",tstr3Df, tcstr, & 
+              "Change in fsd - ani",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_dafsdani)
+           call define_hist_field(n_dafsdlatm,"dafsdlatm","1",tstr3Df, tcstr, & 
+              "Change in fsd - latm",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_dafsdlatm)
+           call define_hist_field(n_dafsdmrg,"dafsdmrg","1",tstr3Df, tcstr, & 
+              "Change in fsd - merge",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_dafsdmrg)
+           call define_hist_field(n_dafsdwave,"dafsdwave","1",tstr3Df, tcstr, & 
+              "Change in fsd - waves",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_dafsdwave)
+           call define_hist_field(n_dafsdlatg,"dafsdlatg","1",tstr3Df, tcstr, & 
+              "Change in fsd - 3",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_dafsdlatg)
+
+      endif ! if (histfreq(ns1) /= 'x') then
+      enddo ! ns1 
+! LR
 
       !-----------------------------------------------------------------
       ! 4D (categories, vertical) variables must be looped separately
@@ -1511,6 +1775,47 @@
 
       endif ! if (histfreq(ns1) /= 'x') then
       enddo
+! LR 
+      do ns1 = 1, nstreams
+      if (histfreq(ns1) /= 'x') then
+
+     ! Floe size distribution
+           call define_hist_field(n_areal_fstd,"areal_fstd","1",tstr4Df, tcstr, & 
+              "areal floe size and thickness distribution",    &
+              "per unit bin width",        &
+               c1, c0, ns1, f_areal_fstd)
+
+           call define_hist_field(n_areal_mfstd_tilda, & 
+               "areal_mfstd","1",tstr4Df, tcstr, & 
+              "areal modified floe size and thickness distribtution",    &
+              "includes bin width",        &
+               c1, c0, ns1, f_areal_mfstd_tilda)
+
+
+           call define_hist_field(n_damfstdani,"damfstdani","1",tstr4Df, tcstr, & 
+              "Change in fnk - ani",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_damfstdani)
+           call define_hist_field(n_damfstdlatm,"damfstdlatm","1",tstr4Df, tcstr, & 
+              "Change in fnk - latm",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_damfstdlatm)
+           call define_hist_field(n_damfstdmrg,"damfstdmrg","1",tstr4Df, tcstr, & 
+              "Change in fnk - merge",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_damfstdmrg)
+           call define_hist_field(n_damfstdwave,"damfstdwave","1",tstr4Df, tcstr, & 
+              "Change in fnk - waves",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_damfstdwave)
+           call define_hist_field(n_damfstdlatg,"damfstdlatg","1",tstr4Df, tcstr, & 
+              "Change in fnk - 3",    &
+              "Avg over freq period",        &
+               c1, c0, ns1, f_damfstdlatg)
+
+            endif ! if (histfreq(ns1) /= 'x') then
+      enddo ! ns1
+! LR
 
        if (f_Tinz   (1:1) /= 'x') then
             if (allocated(Tinz4d)) deallocate(Tinz4d)
@@ -1554,6 +1859,9 @@
       igrdz(n_VGRDi    ) = f_VGRDi
       igrdz(n_VGRDs    ) = f_VGRDs
       igrdz(n_VGRDb    ) = f_VGRDb
+! LR
+      igrdz(n_NFSD    ) = f_NFSD
+! LR
 
       !-----------------------------------------------------------------
       ! diagnostic output
@@ -1606,6 +1914,10 @@
       if (allocated(a3Db)) deallocate(a3Db)
       if (num_avail_hist_fields_3Db > 0) &
       allocate(a3Db(nx_block,ny_block,nzlyrb,num_avail_hist_fields_3Db,max_blocks))
+! LR
+      if (num_avail_hist_fields_3Df > 0) &
+      allocate(a3Df(nx_block,ny_block,nfsd_hist,num_avail_hist_fields_3Df,max_blocks))
+! LR
 
       if (allocated(a4Di)) deallocate(a4Di)
       if (num_avail_hist_fields_4Di > 0) &
@@ -1616,14 +1928,24 @@
       if (allocated(a4Db)) deallocate(a4Db)
       if (num_avail_hist_fields_4Db > 0) &
       allocate(a4Db(nx_block,ny_block,nzblyr,ncat_hist,num_avail_hist_fields_4Db,max_blocks))
+! LR
+      if (num_avail_hist_fields_4Df > 0) &
+      allocate(a4Df(nx_block,ny_block,nfsd_hist,ncat_hist,num_avail_hist_fields_4Df,max_blocks))
+! LR
 
       if (allocated(a2D))  a2D (:,:,:,:)     = c0
       if (allocated(a3Dc)) a3Dc(:,:,:,:,:)   = c0
       if (allocated(a3Dz)) a3Dz(:,:,:,:,:)   = c0
       if (allocated(a3Db)) a3Db(:,:,:,:,:)   = c0
+! LR
+      if (allocated(a3Df)) a3Df(:,:,:,:,:)   = c0
+! LR
       if (allocated(a4Di)) a4Di(:,:,:,:,:,:) = c0
       if (allocated(a4Ds)) a4Ds(:,:,:,:,:,:) = c0
       if (allocated(a4Db)) a4Db(:,:,:,:,:,:) = c0
+! LR
+      if (allocated(a4Df)) a4Df(:,:,:,:,:,:) = c0
+! LR
       avgct(:) = c0
       albcnt(:,:,:,:) = c0
 
@@ -1690,6 +2012,20 @@
       use ice_therm_mushy, only: temperature_mush, temperature_snow, density_brine, liquid_fraction
       use ice_timers, only: ice_timer_start, ice_timer_stop, timer_readwrite
       use ice_zbgc_shared, only: skl_bgc
+!  LR CMB
+      use ice_flux, only: flateral, fbottom, latsurf_area, lead_area, &
+                          wave_hs, wave_tz, vlateral, &
+                          cml_nfloes, nearest_wave_hs, nearest_wave_tz, &
+                          wave_search_i, wave_search_j, &
+                          ice_search_i, ice_search_j, &
+                          G_radial, wave_spectrum
+      use ice_wavebreaking, only: nfl
+      use ice_fsd
+      use ice_grid, only: hm
+      use ice_domain_size, only: nfsd    !CMB
+      use ice_communicate, only: my_task, master_task ! TEMP!!
+      use ice_constants, only: c2 !HK
+!  LR CMB
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step
@@ -1725,6 +2061,14 @@
       real (kind=dbl_kind), dimension (nx_block,ny_block,ncat_hist) :: &
          worka3, ravgipn
 
+! LR
+      real (kind=dbl_kind), dimension(nx_block,ny_block,nfsd_hist,ncat_hist) :: &
+         workd
+
+      real (kind=dbl_kind), dimension(nx_block,ny_block,nfsd_hist) :: &
+         worke
+! LR
+
       type (block) :: &
          this_block           ! block information for current block
 
@@ -1736,9 +2080,15 @@
       n3Dccum = n2D     + num_avail_hist_fields_3Dc
       n3Dzcum = n3Dccum + num_avail_hist_fields_3Dz
       n3Dbcum = n3Dzcum + num_avail_hist_fields_3Db
-      n4Dicum = n3Dbcum + num_avail_hist_fields_4Di
+! LR
+      n3Dfcum = n3Dbcum + num_avail_hist_fields_3Df 
+! LR
+      n4Dicum = n3Dfcum + num_avail_hist_fields_4Di  ! LR
       n4Dscum = n4Dicum + num_avail_hist_fields_4Ds 
       n4Dbcum = n4Dscum + num_avail_hist_fields_4Db ! should equal num_avail_hist_fields_tot
+! LR
+      n4Dfcum = n4Dbcum + num_avail_hist_fields_4Df 
+! LR  
 
       do ns = 1,nstreams
          if (.not. hist_avg .or. histfreq(ns) == '1') then  ! write snapshots
@@ -1761,11 +2111,20 @@
               if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) &
                   a3Db(:,:,:,nn,:) = c0
            enddo
-           do n = n3Dbcum + 1, n4Dicum
+! LR
+           do n = n3Dbcum + 1, n3Dfcum
               nn = n - n3Dbcum
+              if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) &
+                  a3Df(:,:,:,nn,:) = c0
+           enddo
+!LR           do n = n3Dbcum + 1, n4Dicum
+!LR              nn = n - n3Dbcum
+           do n = n3Dfcum + 1, n4Dicum
+              nn = n - n3Dfcum
               if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) &
                   a4Di(:,:,:,:,nn,:) = c0
            enddo
+! LR
            do n = n4Dicum + 1, n4Dscum
               nn = n - n4Dicum
               if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) &
@@ -1776,6 +2135,13 @@
               if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) &
                   a4Db(:,:,:,:,nn,:) = c0
            enddo
+! LR
+            do n = n4Dbcum + 1, n4Dfcum ! LR
+              nn = n - n4Dbcum
+              if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) &
+                  a4Df(:,:,:,:,nn,:) = c0
+           enddo
+! LR
            avgct(ns) = c1
          else                      ! write averages over time histfreq
            avgct(ns) = avgct(ns) + c1
@@ -1803,9 +2169,98 @@
 
          ! Need to always accumulate ice fraction.
          call accum_hist_field(n_aice,   iblk, aice(:,:,iblk), a2D)
+         !if (MAXVAL(aice).gt.puny) print *, 'AICE ',MAXVAL(aice),' at ',MAXLOC(aice),'; a2D ',MAXVAL(a2D(:,:,n_aice(1),:)),' at ',MAXLOC(a2D(:,:,n_aice(1),:))
 
 !        if (f_example(1:1) /= 'x') &
 !            call accum_hist_field(n_example,iblk, vice(:,:,iblk), a2D)
+! LR
+         if (f_fbottom (1:1) /= 'x') &
+             call accum_hist_field(n_fbottom, iblk, fbottom(:,:,iblk), a2D)
+         if (f_flateral (1:1) /= 'x') &
+             call accum_hist_field(n_flateral, iblk, flateral(:,:,iblk), a2D)
+         if (f_vlateral (1:1) /= 'x') &
+             call accum_hist_field(n_vlateral, iblk, vlateral(:,:,iblk), a2D)
+         if (f_gradial (1:1) /= 'x') &
+             call accum_hist_field(n_gradial, iblk, G_radial(:,:,iblk), a2D)
+         if (f_leadarea (1:1) /= 'x') &
+             call accum_hist_field(n_leadarea, iblk, lead_area(:,:,iblk), a2D)
+         if (f_latsurfarea (1:1) /= 'x') &
+             call accum_hist_field(n_latsurfarea,iblk,latsurf_area(:,:,iblk), a2D)
+!         if (f_wave_hs (1:1) /= 'x') &
+!             call accum_hist_field(n_wave_hs,iblk,wave_hs(:,:,iblk), a2D)
+!         if (f_wave_tz (1:1) /= 'x') &
+!             call accum_hist_field(n_wave_tz,iblk,wave_tz(:,:,iblk), a2D)
+!         if (f_nearest_wave_hs (1:1) /= 'x') &
+!             call accum_hist_field(n_nearest_wave_hs,iblk,nearest_wave_hs(:,:,iblk), a2D)
+!         if (f_nearest_wave_tz (1:1) /= 'x') &
+!             call accum_hist_field(n_nearest_wave_tz,iblk,nearest_wave_tz(:,:,iblk), a2D)
+         if (f_cml_nfloes (1:1) /= 'x') &
+             call accum_hist_field(n_cml_nfloes,iblk,cml_nfloes(:,:,iblk), a2D)
+         if (f_hm (1:1) /= 'x') &
+             call accum_hist_field(n_hm,iblk,hm(:,:,iblk), a2D)
+         if (f_nfloes (1:1) /= 'x') &
+             call accum_hist_field(n_nfloes,iblk,nfl(:,:,iblk), a2D)
+
+         if (f_concforww (1:1) /= 'x') then
+             do j = jlo, jhi
+             do i = ilo, ihi
+                worka(i,j) = c0
+                do n = 1, ncat_hist
+                do k = 1, nfsd_hist
+                    worka(i,j) = worka(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                end do
+                end do
+             end do
+             end do
+             call accum_hist_field(n_concforww,   iblk, worka(:,:), a2D)
+         end if
+
+         if (f_diamforww (1:1) /= 'x') then
+             do j = jlo, jhi
+             do i = ilo, ihi
+                worka(i,j) = c0
+                workb(i,j) = c0
+                do n = 1, ncat_hist
+                do k = 1, nfsd_hist
+                    ! number-mean radius, following Eqn. 5 in HT2017
+!                    worka(i,j) = worka(i,j) + (floe_rad_c(k)*aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)/floe_area_c(k))
+                    ! normalization factor
+!                    workb(i,j) = workb(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)/floe_area_c(k)
+                    ! area-mean radius, following Eqn. 26 in RHDB2018
+                    worka(i,j) = worka(i,j) + floe_rad_c(k)*aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                    ! normalization factor
+                    workb(i,j) = workb(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                end do
+                end do
+                ! factor of 2 for diameter
+                if (workb(i,j).gt.c0) worka(i,j) = c2*worka(i,j) / workb(i,j)
+                worka(i,j) = max(3.,worka(i,j))
+             end do
+             end do
+             call accum_hist_field(n_diamforww,   iblk, worka(:,:), a2D)
+         end if
+
+         if (f_thickforww (1:1) /= 'x') then
+             do j = jlo, jhi
+             do i = ilo, ihi
+                worka(i,j) = c0
+                workb(i,j) = c0  
+                do n = 1, ncat_hist
+                do k = 1, nfsd_hist
+                    worka(i,j) = worka(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                    workb(i,j) = workb(i,j) + vicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                end do
+                end do
+                if (worka(i,j) > puny) then
+                      workb(i,j) = workb(i,j) / worka(i,j)
+                else
+                      workb(i,j) = c1
+                endif
+             end do
+             end do
+             call accum_hist_field(n_thickforww,   iblk, workb(:,:), a2D)  
+         end if 
+! LR
          if (f_hi     (1:1) /= 'x') &
              call accum_hist_field(n_hi,     iblk, vice(:,:,iblk), a2D)
          if (f_hs     (1:1) /= 'x') &
@@ -2067,6 +2522,75 @@
            call accum_hist_field(n_icepresent, iblk, worka(:,:), a2D)
          endif
 
+        if (f_keffn_top (1:1) /= 'x') &
+             call accum_hist_field(n_keffn_top-n2D, iblk, ncat_hist, &
+                                   keffn_top(:,:,1:ncat_hist,iblk), a3Dc)
+         if (f_fsurfn_ai   (1:1) /= 'x') &
+             call accum_hist_field(n_fsurfn_ai-n2D, iblk, ncat_hist, &
+                  fsurfn(:,:,1:ncat_hist,iblk)*aicen_init(:,:,1:ncat_hist,iblk), a3Dc)
+         if (f_fcondtopn_ai   (1:1) /= 'x') &
+             call accum_hist_field(n_fcondtopn_ai-n2D, iblk, ncat_hist, &
+                  fcondtopn(:,:,1:ncat_hist,iblk)*aicen_init(:,:,1:ncat_hist,iblk), a3Dc)
+         if (f_flatn_ai   (1:1) /= 'x') &
+             call accum_hist_field(n_flatn_ai-n2D, iblk, ncat_hist, &
+                  flatn(:,:,1:ncat_hist,iblk)*aicen_init(:,:,1:ncat_hist,iblk), a3Dc)
+         if (f_fsensn_ai   (1:1) /= 'x') &
+             call accum_hist_field(n_fsensn_ai-n2D, iblk, ncat_hist, &
+                  fsensn(:,:,1:ncat_hist,iblk)*aicen_init(:,:,1:ncat_hist,iblk), a3Dc)
+         ! Calculate surface heat flux that causes melt (calculated by the 
+         ! atmos in HadGEM3 so needed for checking purposes)
+         if (f_fmelttn_ai   (1:1) /= 'x') &
+             call accum_hist_field(n_fmelttn_ai-n2D, iblk, ncat_hist, &
+                  max(fsurfn(:,:,1:ncat_hist,iblk) - fcondtopn(:,:,1:ncat_hist,iblk),c0) &
+                      *aicen_init(:,:,1:ncat_hist,iblk), a3Dc)
+! LR
+        if (f_danani     (1:1) /= 'x') call &
+                                        accum_hist_field (n_danani-n2D, &
+                                        iblk, ncat_hist,d_an_addnew(:,:,:,iblk), a3Dc)        
+        if (f_danlatm     (1:1) /= 'x') call &
+                                         accum_hist_field(n_danlatm-n2D, &
+                                         iblk, ncat_hist, d_an_latm(:,:,:,iblk), a3Dc)
+        if (f_danlatg     (1:1) /= 'x') call & 
+                                         accum_hist_field(n_danlatg-n2D, &
+                                         iblk, ncat_hist, d_an_latg(:,:,:,iblk), a3Dc)
+
+       if (f_areal_fsd     (1:1) /= 'x') then
+
+          do j = jlo, jhi
+          do i = ilo, ihi
+          do k = 1, nfsd_hist 
+                worke(i,j,k)=c0
+                do n=1,ncat_hist
+                        worke(i,j,k) = worke(i,j,k) + (trcrn(i,j,nt_fsd+k-1,n,iblk) * &
+                        aicen_init(i,j,n,iblk) / floe_binwidth(k) )
+                end do
+          end do
+          end do
+          end do
+
+         call accum_hist_field(n_areal_fsd-n3Dbcum, iblk, nfsd_hist, &
+                                 worke, a3Df)
+        
+
+        end if
+ 
+        if (f_dafsdani      (1:1) /= 'x') call &
+                                        accum_hist_field (n_dafsdani-n3Dbcum, &
+                                        iblk, nfsd_hist, d_afsd_addnew(:,:,:,iblk), a3Df)        
+        if (f_dafsdlatm     (1:1) /= 'x') call &
+                                         accum_hist_field(n_dafsdlatm-n3Dbcum, &
+                                         iblk, nfsd_hist, d_afsd_latm(:,:,:,iblk), a3Df)
+        if (f_dafsdwave     (1:1) /= 'x') call &
+                                         accum_hist_field(n_dafsdwave-n3Dbcum, &
+                                         iblk, nfsd_hist, d_afsd_wave(:,:,:,iblk), a3Df)
+        if (f_dafsdmrg      (1:1) /= 'x') call & 
+                                         accum_hist_field(n_dafsdmrg-n3Dbcum, &
+                                         iblk, nfsd_hist, d_afsd_merge(:,:,:,iblk), a3Df)
+        if (f_dafsdlatg     (1:1) /= 'x') call & 
+                                         accum_hist_field(n_dafsdlatg-n3Dbcum, &
+                                         iblk, nfsd_hist, d_afsd_latg(:,:,:,iblk), a3Df)
+
+! LR
          ! 2D CMIP fields
 
          if (f_sithick(1:1) /= 'x') then
@@ -2606,6 +3130,10 @@
                     rho_ice = rho_ice / real(nilyr,kind=dbl_kind)
                  endif
                  worka(i,j) = ((rho_ocn-rho_ice)*vice(i,j,iblk) - rhos*vsno(i,j,iblk))/rho_ocn
+                 if (worka(i,j) < c0) then
+                    write(nu_diag,*) 'negative fb',rho_ocn,rho_ice,rhos
+                    write(nu_diag,*) vice(i,j,iblk),vsno(i,j,iblk)
+                 endif
               endif
            enddo
            enddo
@@ -2883,8 +3411,12 @@
                   enddo
                enddo
             endif
-            call accum_hist_field(n_Tinz-n3Dbcum, iblk, nzilyr, ncat_hist, &
+! LR
+!            call accum_hist_field(n_Tinz-n3Dbcum, iblk, nzilyr, ncat_hist, &
+!                                  Tinz4d(:,:,1:nzilyr,1:ncat_hist), a4Di)
+              call accum_hist_field(n_Tinz-n3Dfcum, iblk, nzilyr, ncat_hist, &
                                   Tinz4d(:,:,1:nzilyr,1:ncat_hist), a4Di)
+! LR
          endif
          if (f_Sinz   (1:1) /= 'x') then
             Sinz4d(:,:,:,:) = c0
@@ -2897,8 +3429,12 @@
                enddo
                enddo
             enddo
-            call accum_hist_field(n_Sinz-n3Dbcum, iblk, nzilyr, ncat_hist, &
+! LR
+!            call accum_hist_field(n_Sinz-n3Dbcum, iblk, nzilyr, ncat_hist, &
+!                                  Sinz4d(:,:,1:nzilyr,1:ncat_hist), a4Di)
+            call accum_hist_field(n_Sinz-n3Dfcum, iblk, nzilyr, ncat_hist, &
                                   Sinz4d(:,:,1:nzilyr,1:ncat_hist), a4Di)
+! LR
          endif
          
          if (f_Tsnz   (1:1) /= 'x') then
@@ -2930,6 +3466,44 @@
                                   Tsnz4d(:,:,1:nzslyr,1:ncat_hist), a4Ds)
          endif
          
+! LR
+        if (f_areal_fstd     (1:1) /= 'x') then
+
+         do j = jlo, jhi
+          do i = ilo, ihi
+          do n = 1, ncat_hist
+          do k = 1, nfsd_hist 
+                workd(i,j,k,n) = trcrn(i,j,nt_fsd+k-1,n,iblk) * &
+                                 aicen_init(i,j,n,iblk) / floe_binwidth(k)
+     
+          end do
+          end do
+          end do
+          end do
+          call accum_hist_field(n_areal_fstd-n4Dbcum, iblk, nfsd_hist, ncat_hist, &
+                                  workd, a4Df)
+        end if
+
+        if (f_areal_mfstd_tilda     (1:1) /= 'x') call & 
+                                     accum_hist_field(n_areal_mfstd_tilda-n4Dbcum, &
+                                     iblk, nfsd_hist, ncat_hist, trcrn(:,:,nt_fsd:nt_fsd+nfsd-1,:,iblk), a4Df)
+
+        if (f_damfstdani     (1:1) /= 'x') call &
+                                        accum_hist_field (n_damfstdani-n4Dbcum, &
+                                        iblk, nfsd_hist, ncat_hist,d_amfstd_addnew(:,:,:,:,iblk), a4Df)        
+        if (f_damfstdlatm     (1:1) /= 'x') call &
+                                         accum_hist_field(n_damfstdlatm-n4Dbcum, &
+                                         iblk, nfsd_hist, ncat_hist, d_amfstd_latm(:,:,:,:,iblk), a4Df)
+        if (f_damfstdwave     (1:1) /= 'x') call &
+                                         accum_hist_field(n_damfstdwave-n4Dbcum, &
+                                         iblk, nfsd_hist, ncat_hist, d_amfstd_wave(:,:,:,:,iblk), a4Df)
+        if (f_damfstdmrg     (1:1) /= 'x') call & 
+                                         accum_hist_field(n_damfstdmrg-n4Dbcum, &
+                                         iblk, nfsd_hist, ncat_hist, d_amfstd_merge(:,:,:,:,iblk), a4Df)
+        if (f_damfstdlatg     (1:1) /= 'x') call & 
+                                         accum_hist_field(n_damfstdlatg-n4Dbcum, &
+                                         iblk, nfsd_hist, ncat_hist, d_amfstd_latg(:,:,:,:,iblk), a4Df)
+! LR
         ! Calculate aggregate surface melt flux by summing category values
         if (f_fmeltt_ai(1:1) /= 'x') then
          do ns = 1, nstreams
@@ -3254,6 +3828,34 @@
                        if (tmask(i,j,iblk)) then
                              a2D(i,j,n_sialb(ns),iblk) = &
                              a2D(i,j,n_sialb(ns),iblk)*avgct(ns)*ravgip(i,j)
+                             if (ravgip(i,j) == c0) a2D(i,j,n_sialb(ns),iblk) = spval_dbl
+                             if (albcnt(i,j,iblk,ns) <= puny) a2D(i,j,n_sialb(ns),iblk) = spval_dbl
+                       endif
+                    enddo             ! i
+                    enddo             ! j
+                 endif
+              endif
+              if (index(avail_hist_fields(n)%vname,'sidmassevapsubl') /= 0) then
+                 if (f_sidmassevapsubl(1:1) /= 'x' .and. n_sidmassevapsubl(ns) /= 0) then
+                    do j = jlo, jhi
+                    do i = ilo, ihi
+                       if (tmask(i,j,iblk)) then
+                             a2D(i,j,n_sidmassevapsubl(ns),iblk) = &
+                             a2D(i,j,n_sidmassevapsubl(ns),iblk)*avgct(ns)*ravgip(i,j)
+                             if (ravgip(i,j) == c0) a2D(i,j,n_sidmassevapsubl(ns),iblk) = spval_dbl
+                       endif
+                    enddo             ! i
+                    enddo             ! j
+                 endif
+              endif
+              if (index(avail_hist_fields(n)%vname,'sndmasssnf') /= 0) then
+                 if (f_sndmasssnf(1:1) /= 'x' .and. n_sndmasssnf(ns) /= 0) then
+                    do j = jlo, jhi
+                    do i = ilo, ihi
+                       if (tmask(i,j,iblk)) then
+                             a2D(i,j,n_sndmasssnf(ns),iblk) = &
+                             a2D(i,j,n_sndmasssnf(ns),iblk)*avgct(ns)*ravgip(i,j)
+                             if (ravgip(i,j) == c0) a2D(i,j,n_sndmasssnf(ns),iblk) = spval_dbl
                        endif
                        if (ravgip(i,j) == c0) a2D(i,j,n_sialb(ns),iblk) = spval_dbl
                        if (albcnt(i,j,iblk,ns) <= puny) a2D(i,j,n_sialb(ns),iblk) = spval_dbl
@@ -3582,6 +4184,43 @@
               enddo             ! i
               enddo             ! j
               endif
+              if (avail_hist_fields(n)%vname(1:6) == 'albsni') then
+              do j = jlo, jhi
+              do i = ilo, ihi
+                 if (tmask(i,j,iblk)) then 
+                    ravgctz = c0
+                    if (albcnt(i,j,iblk,ns) > puny) &
+                        ravgctz = c1/albcnt(i,j,iblk,ns)
+                    if (f_albsni (1:1) /= 'x' .and. n_albsni(ns) /= 0) &
+                       a2D(i,j,n_albsni(ns),iblk) = &
+                       a2D(i,j,n_albsni(ns),iblk)*avgct(ns)*ravgctz
+                 endif
+              enddo             ! i
+              enddo             ! j
+              endif
+              if (avail_hist_fields(n)%vname(1:8) == 'alvdr_ai') then
+              do j = jlo, jhi
+              do i = ilo, ihi
+                 if (tmask(i,j,iblk)) then 
+                    ravgctz = c0
+                    if (albcnt(i,j,iblk,ns) > puny) &
+                        ravgctz = c1/albcnt(i,j,iblk,ns)
+                    if (f_alvdr_ai (1:1) /= 'x' .and. n_alvdr_ai(ns) /= 0) &
+                       a2D(i,j,n_alvdr_ai(ns),iblk) = &
+                       a2D(i,j,n_alvdr_ai(ns),iblk)*avgct(ns)*ravgctz
+                    if (f_alvdf_ai (1:1) /= 'x' .and. n_alvdf_ai(ns) /= 0) &
+                       a2D(i,j,n_alvdf_ai(ns),iblk) = &
+                       a2D(i,j,n_alvdf_ai(ns),iblk)*avgct(ns)*ravgctz
+                    if (f_alidr_ai (1:1) /= 'x' .and. n_alidr_ai(ns) /= 0) &
+                       a2D(i,j,n_alidr_ai(ns),iblk) = &
+                       a2D(i,j,n_alidr_ai(ns),iblk)*avgct(ns)*ravgctz
+                    if (f_alidf_ai (1:1) /= 'x' .and. n_alidf_ai(ns) /= 0) &
+                       a2D(i,j,n_alidf_ai(ns),iblk) = &
+                       a2D(i,j,n_alidf_ai(ns),iblk)*avgct(ns)*ravgctz
+                 endif
+              enddo             ! i
+              enddo             ! j
+              endif
 
               endif
            enddo                ! n
@@ -3611,6 +4250,7 @@
                        if (tmask(i,j,iblk)) then
                              a3Dc(i,j,k,n_siitdthick(ns)-n2D,iblk) = &
                              a3Dc(i,j,k,n_siitdthick(ns)-n2D,iblk)*avgct(ns)*ravgipn(i,j,k)
+                             if (ravgipn(i,j,k) == c0) a3Dc(i,j,k,n_siitdthick(ns)-n2D,iblk) = spval_dbl
                        endif
                     enddo             ! i
                     enddo             ! j
@@ -3625,6 +4265,7 @@
                        if (tmask(i,j,iblk)) then
                              a3Dc(i,j,k,n_siitdsnthick(ns)-n2D,iblk) = &
                              a3Dc(i,j,k,n_siitdsnthick(ns)-n2D,iblk)*avgct(ns)*ravgipn(i,j,k)
+                             if (ravgipn(i,j,k) == c0) a3Dc(i,j,k,n_siitdsnthick(ns)-n2D,iblk) = spval_dbl
                        endif
                     enddo             ! i
                     enddo             ! j
@@ -3669,9 +4310,29 @@
               enddo             ! k
               endif
            enddo                ! n
+! LR
+           do n = 1, num_avail_hist_fields_3Df
+              nn = n3Dbcum + n
+              if (avail_hist_fields(nn)%vhistfreq == histfreq(ns)) then 
+              do k = 1, nfsd
+              do j = jlo, jhi
+              do i = ilo, ihi
+                 if (.not. tmask(i,j,iblk)) then ! mask out land points
+                    a3Df(i,j,k,n,iblk) = spval_dbl
+                 else                            ! convert units
+                    a3Df(i,j,k,n,iblk) = avail_hist_fields(nn)%cona*a3Df(i,j,k,n,iblk) &
+                                   * ravgct + avail_hist_fields(nn)%conb
+                 endif
+              enddo             ! i
+              enddo             ! j
+              enddo             ! k
+              endif
+           enddo                ! n
+
 
            do n = 1, num_avail_hist_fields_4Di
-              nn = n3Dbcum + n
+! LR              nn = n3Dbcum + n
+              nn = n3Dfcum + n
               if (avail_hist_fields(nn)%vhistfreq == histfreq(ns)) then 
               do k = 1, nzilyr
               do ic = 1, ncat_hist
@@ -3728,7 +4389,28 @@
               enddo             ! k
               endif
            enddo                ! n
+! LR
+           do n = 1, num_avail_hist_fields_4Df
+              nn = n4Dbcum + n
+              if (avail_hist_fields(nn)%vhistfreq == histfreq(ns)) then
+              do k = 1, nfsd
+              do ic = 1, ncat_hist
+              do j = jlo, jhi
+              do i = ilo, ihi
+                 if (.not. tmask(i,j,iblk)) then ! mask out land points
+                    a4Df(i,j,k,ic,n,iblk) = spval_dbl
+                 else                            ! convert units
+                    a4Df(i,j,k,ic,n,iblk) = avail_hist_fields(nn)%cona*a4Df(i,j,k,ic,n,iblk) &
+                                   * ravgct + avail_hist_fields(nn)%conb
+                 endif
+              enddo             ! i
+              enddo             ! j
+              enddo             ! ic
+              enddo             ! k
+              endif
+           enddo                ! n
 
+! LR
       !---------------------------------------------------------------
       ! snapshots
       !---------------------------------------------------------------
@@ -3770,8 +4452,17 @@
                  if (n_s22      (ns) /= 0) a2D(i,j,n_s22(ns),      iblk) = spval_dbl
                  if (n_yieldstress11 (ns) /= 0) a2D(i,j,n_yieldstress11(ns),iblk) = spval_dbl
                  if (n_yieldstress12 (ns) /= 0) a2D(i,j,n_yieldstress12(ns),iblk) = spval_dbl
-                 if (n_yieldstress22 (ns) /= 0) a2D(i,j,n_yieldstress22(ns),iblk) = spval_dbl
-              else
+                 if (n_yieldstress22 (ns) /= 0) a2D(i,j,n_yieldstress22(ns),iblk) = spval_dbl ! LR
+                 if (n_wave_hs (ns) /=0 ) a2D(i,j,n_wave_hs(ns), iblk) = spval_dbl
+                 if (n_wave_tz (ns) /=0 ) a2D(i,j,n_wave_tz(ns), iblk) = spval_dbl
+                 if (n_nearest_wave_hs (ns) /=0 ) a2D(i,j,n_nearest_wave_hs(ns), iblk) = spval_dbl
+                 if (n_nearest_wave_tz (ns) /=0 ) a2D(i,j,n_nearest_wave_tz(ns), iblk) = spval_dbl
+                 if (n_wave_search_i (ns) /=0 ) a2D(i,j,n_wave_search_i(ns), iblk) = spval_dbl
+                 if (n_wave_search_j (ns) /=0 ) a2D(i,j,n_wave_search_j(ns), iblk) = spval_dbl
+                 if (n_ice_search_i (ns) /=0 ) a2D(i,j,n_ice_search_i(ns), iblk) = spval_dbl
+                 if (n_wave_search_j (ns) /=0 ) a2D(i,j,n_wave_search_j(ns), iblk) = spval_dbl
+                 if (n_wavespectrum (ns) /= 0) a2D(i,j,n_wavespectrum(ns), iblk) = spval_dbl
+            else        
                  if (n_divu     (ns) /= 0) a2D(i,j,n_divu(ns),iblk)      = &
                        divu (i,j,iblk)*avail_hist_fields(n_divu(ns))%cona
                  if (n_shear    (ns) /= 0) a2D(i,j,n_shear(ns),iblk)     = &
@@ -3831,7 +4522,29 @@
                        yieldstress12 (i,j,iblk)*avail_hist_fields(n_yieldstress12(ns))%cona
                  if (n_yieldstress22     (ns) /= 0) a2D(i,j,n_yieldstress22(ns),iblk)      = &
                        yieldstress22 (i,j,iblk)*avail_hist_fields(n_yieldstress22(ns))%cona
-              endif
+! LR
+                 if (n_wave_hs (ns) /= 0) a2D(i,j,n_wave_hs(ns), iblk ) = &
+                        wave_hs (i,j,iblk)*avail_hist_fields(n_wave_hs(ns))%cona
+                 if (n_wave_tz (ns) /= 0) a2D(i,j,n_wave_tz(ns), iblk ) = &
+                        wave_tz (i,j,iblk)*avail_hist_fields(n_wave_tz(ns))%cona
+                 if (n_nearest_wave_hs (ns) /= 0) a2D(i,j,n_nearest_wave_hs(ns), iblk ) = &
+                        nearest_wave_hs (i,j,iblk)*avail_hist_fields(n_nearest_wave_hs(ns))%cona
+                 if (n_nearest_wave_tz (ns) /= 0) a2D(i,j,n_nearest_wave_tz(ns), iblk ) = &
+                        nearest_wave_tz (i,j,iblk)*avail_hist_fields(n_nearest_wave_tz(ns))%cona
+                 if (n_wave_search_i (ns) /= 0) a2D(i,j,n_wave_search_i(ns), iblk ) = &
+                        wave_search_i (i,j,iblk)*avail_hist_fields(n_wave_search_i(ns))%cona
+                 if (n_wave_search_j (ns) /= 0) a2D(i,j,n_wave_search_j(ns), iblk ) = &
+                        wave_search_j (i,j,iblk)*avail_hist_fields(n_wave_search_j(ns))%cona
+                 if (n_ice_search_i (ns) /= 0) a2D(i,j,n_ice_search_i(ns), iblk ) = &
+                        ice_search_i (i,j,iblk)*avail_hist_fields(n_ice_search_i(ns))%cona
+                 if (n_ice_search_j (ns) /= 0) a2D(i,j,n_ice_search_j(ns), iblk ) = &
+                        ice_search_j (i,j,iblk)*avail_hist_fields(n_ice_search_j(ns))%cona
+                 if (n_wavespectrum (ns) /= 0) a2D(i,j,n_wavespectrum(ns), iblk) = &
+                     wave_spectrum(i,j,25,iblk)*avail_hist_fields(n_wavespectrum(ns))%cona
+
+! LR
+  
+             endif
            enddo                ! i
            enddo                ! j
 
@@ -3884,10 +4597,18 @@
            nn = n - n3Dzcum
            if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) a3Db(:,:,:,nn,:) = c0
         enddo
-        do n = n3Dbcum + 1, n4Dicum
+! LR
+! LR        do n = n3Dbcum + 1, n4Dicum
+! LR          nn = n - n3Dbcum
+         do n = n3Dbcum + 1, n3Dfcum
            nn = n - n3Dbcum
+           if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) a3Df(:,:,:,nn,:) = c0
+        enddo
+        do n = n3Dfcum + 1, n4Dicum
+           nn = n - n3Dfcum
            if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) a4Di(:,:,:,:,nn,:) = c0
         enddo
+! LR
         do n = n4Dicum + 1, n4Dscum
            nn = n - n4Dicum
            if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) a4Ds(:,:,:,:,nn,:) = c0
@@ -3896,6 +4617,12 @@
            nn = n - n4Dscum
            if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) a4Db(:,:,:,:,nn,:) = c0
         enddo
+! LR
+        do n = n4Dbcum + 1, n4Dfcum
+           nn = n - n4Dbcum
+           if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) a4Df(:,:,:,:,nn,:) = c0
+        enddo
+! LR
 
       endif  ! write_history or write_ic
       enddo  ! nstreams

@@ -31,10 +31,12 @@
       private
       public :: update_vertical_tracers, lateral_melt, linear_itd, &
                 add_new_ice
-
-      logical (kind=log_kind), parameter :: &
+! LR
+      ! now public so it can be used in ice_fsd_thermo
+      logical (kind=log_kind), parameter, public :: & 
          l_conservation_check = .false.   ! if true, check conservation
                                           ! (useful for debugging)
+! LR
 
 !=======================================================================
 

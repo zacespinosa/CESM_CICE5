@@ -632,6 +632,9 @@
                                         sst,      Tf,       &
                                         strocnxT, strocnyT, &
                                         Tbot,     fbot,     &
+! LR
+                                        fside,              &
+! LR
                                         rside,    Cdn_ocn)
 
       integer (kind=int_kind), intent(in) :: &
@@ -664,6 +667,9 @@
          intent(out) :: &
          Tbot    , & ! ice bottom surface temperature (deg C)
          fbot    , & ! heat flux to ice bottom  (W/m^2)
+! LR
+         fside   , & ! heat flux to ice side  (W/m^2)
+! LR
          rside       ! fraction of ice that melts laterally
 
       ! local variables
@@ -679,8 +685,7 @@
          indxi, indxj     ! compressed indices for cells with ice melting
 
       real (kind=dbl_kind), dimension (:), allocatable :: &
-         etot    , & ! total energy in column
-         fside       ! lateral heat flux (W/m^2)
+         etot     ! total energy in column
 
       real (kind=dbl_kind) :: &
          deltaT    , & ! SST - Tbot >= 0
@@ -708,6 +713,9 @@
          rside(i,j) = c0
          Tbot (i,j) = Tf(i,j)
          fbot (i,j) = c0
+! LR
+         fside (i,j) = c0
+! LR
       enddo
       enddo
 
@@ -727,13 +735,10 @@
       enddo                     ! j
 
       allocate(etot (imelt))
-      allocate(fside(imelt))
 
       do ij = 1, imelt  ! cells where ice can melt
          i = indxi(ij)
          j = indxj(ij)
-
-         fside(ij) = c0
 
       !-----------------------------------------------------------------
       ! Use boundary layer theory for fbot.
@@ -817,7 +822,7 @@
             i = indxi(ij)
             j = indxj(ij)
             ! lateral heat flux
-            fside(ij) = fside(ij) + rside(i,j)*etot(ij)/dt ! fside < 0
+            fside(i,j) = fside(i,j) + rside(i,j)*etot(ij)/dt ! fside < 0
          enddo                  ! ij
 
       enddo                     ! n
@@ -833,14 +838,16 @@
          i = indxi(ij)
          j = indxj(ij)
 
-         xtmp = frzmlt(i,j)/(fbot(i,j) + fside(ij) + puny) 
+         xtmp = frzmlt(i,j)/(fbot(i,j) + fside(i,j) + puny) 
          xtmp = min(xtmp, c1)
          fbot (i,j) = fbot (i,j) * xtmp
+! LR
+         fside (i,j) = fside (i,j) * xtmp
+! LR
          rside(i,j) = rside(i,j) * xtmp
       enddo                     ! ij
 
       deallocate(etot)
-      deallocate(fside)
 
       end subroutine frzmlt_bottom_lateral
 

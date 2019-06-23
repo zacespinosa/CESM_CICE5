@@ -16,7 +16,11 @@
       use ice_kinds_mod
       use ice_fileunits, only: nu_diag
       use ice_blocks, only: nx_block, ny_block
-      use ice_domain_size, only: max_blocks, ncat, max_aero, max_iso, max_nstrm, nilyr
+      use ice_domain_size, only: max_blocks, ncat, max_aero, max_iso, max_nstrm, nilyr, &
+! LR
+                                nfsd
+      use ice_domain_size, only: nx_global, ny_global
+! LR
       use ice_constants, only: c0, c1, c5, c10, c20, c180, dragio, &
           depressT, stefan_boltzmann, Tffresh, emissivity
 
@@ -166,6 +170,14 @@
          hmix    , & ! mixed layer depth (m)
          daice_da    ! data assimilation concentration increment rate 
                      ! (concentration s-1)(only used in hadgem drivers)
+! LR
+      ! in from waves
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), public :: &
+         wave_hs, & !  significant height of wind and swell waves (m)
+         wave_tz   ! sea surface wind wave mean period from variance &
+                    ! spectral density second frequency moment (s)
+! LR 
+
 
       real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), public :: &
          HDO_ocn    , & ! isotopes
@@ -309,6 +321,9 @@
          congel, & ! basal ice growth         (m/step-->cm/day)
          frazil, & ! frazil ice growth        (m/step-->cm/day)
          frazil_diag, & ! frazil ice growth diagnostic (m/step-->cm/day)
+! LR
+         vlateral,&! lateral ice growth       (m/step-->cm/day)     
+! LR
          snoice, & ! snow-ice formation       (m/step-->cm/day)
          meltt , & ! top ice melt             (m/step-->cm/day)
          melts , & ! snow melt                (m/step-->cm/day)
@@ -342,7 +357,32 @@
          fresh_ai, & ! fresh water flux to ocean (kg/m^2/s)
          fsalt_ai, & ! salt flux to ocean (kg/m^2/s)
          fhocn_ai, & ! net heat flux to ocean (W/m^2)
-         fswthru_ai  ! shortwave penetrating to ocean (W/m^2)
+         fswthru_ai, &  ! shortwave penetrating to ocean (W/m^2)
+! LR
+         G_radial, &    ! lateral melt rate (m/s)
+         lead_area,  &  ! fractional area of ocean defined as lead region 
+         latsurf_area, & ! fractional area of ice on lateral sides of floes
+         fbottom, &     ! flux that goes to bottom melt (W/m^2)
+         flateral, &    ! flux that goes to lateral melt (W/m^2)
+         nearest_wave_hs, & ! sig height of nearest wave
+         nearest_wave_tz, & ! mean period of nearest wave
+         cml_nfloes         ! avg. n floes to nearest wave
+
+      integer (kind=int_kind), dimension (nx_block,ny_block,max_blocks), public :: &
+         ice_search_i,   & ! global i index
+         ice_search_j,   & ! global j index
+         wave_search_i,  & ! the global i-index of nearest wave cell
+         wave_search_j    ! the global j-index of nearest wave cell
+
+       real (kind=dbl_kind), dimension (:,:,:,:), allocatable,  public :: &
+          wave_spectrum     ! wave spectrum in 25 frequencies - e(f) from Wavewatch
+                            ! OR reconstructed from Hs and Tz
+                            ! power spectral density of surface elevation (m^2 s)
+
+     real (kind=dbl_kind), dimension (:), allocatable,  public :: &
+          freq, dfreq        ! freqency values and binwidths
+
+! LR
 
       ! Used with data assimilation in hadgem drivers
       real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks) :: &
@@ -363,7 +403,25 @@
       real (kind=dbl_kind), dimension(nx_block,ny_block,nilyr+1,max_blocks), public :: &
          salinz    ,&   ! initial salinity  profile (ppt)   
          Tmltz          ! initial melting temperature (^oC)
+! CMB
+!#if (defined FSD)
+        real(kind=dbl_kind), dimension (10,10,10,ncat,nfsd,nfsd), public :: &
+        fsdformed_all
+ 
+      real(kind=dbl_kind), dimension (10,10,10,ncat,nfsd), public :: &
+        omega_all
 
+      real(kind=dbl_kind), dimension (10,10,10,ncat,nfsd), public :: &
+        fracture_histogram
+
+      real(kind=dbl_kind), dimension (10,10,10,ncat), public :: &
+        wave_tau
+
+
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,ncat,max_blocks), public :: &
+         rside_itd     ! fraction of ice area that melts laterally for each itd cat
+!#endif
 !=======================================================================
 
       contains
@@ -1123,16 +1181,16 @@
             fsens   (i,j) = c0
             flat    (i,j) = c0
             fswabs  (i,j) = c0
-            flwout  (i,j) = c0
+            flwout  (i,j) = -stefan_boltzmann *(Tf(i,j) + Tffresh)**4
                ! to make upward longwave over ocean reasonable for history file
             evap    (i,j) = c0
-            Tref    (i,j) = c0
-            Qref    (i,j) = c0
+            Tref    (i,j) = Tair(i,j)
+            Qref    (i,j) = Qa  (i,j)
             if (present(Uref) .and. present(wind)) then
                Uref    (i,j) = wind(i,j)
             endif
             if (present(Qref_iso)) then
-               Qref_iso(i,j,:) = c0
+               Qref_iso(i,j,:) = Qa(i,j)
             endif
             if (present(fiso_evap)) then
                fiso_evap(i,j,:) = c0

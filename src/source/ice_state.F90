@@ -108,6 +108,9 @@
          nt_ipnd  , & ! melt pond refrozen lid thickness
          nt_aero  , & ! starting index for aerosols in ice
          nt_iso   , & ! starting index for isotopes in ice
+! CMB
+         nt_fsd   , & ! starting index for floe size distribution
+! CMB
          nt_bgc_N_sk,   & ! algae (skeletal layer)
          nt_bgc_C_sk,   & ! 
          nt_bgc_chl_sk, & ! 
@@ -133,7 +136,10 @@
          tr_pond_topo,& ! if .true., use explicit topography-based ponds
          tr_aero     ,& ! if .true., use aerosol tracers
          tr_iso      ,& ! if .true., use isotope tracers
-         tr_brine       ! if .true., brine height differs from ice thickness
+         tr_brine    ,& ! if .true., brine height differs from ice thickness
+! CMB
+         tr_fsd         ! if .true., have floe size distribution  
+! CMB
 
       !-----------------------------------------------------------------
       ! dynamic variables closely related to the state of the ice

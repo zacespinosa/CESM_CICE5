@@ -70,7 +70,9 @@
       use ice_exit, only: abort_ice
       use ice_timers, only: ice_timer_start, ice_timer_stop, timer_advect
       use ice_transport_remap, only: init_remap
-
+! CMB
+      use ice_state, only: nt_fsd
+! CMB 
       integer (kind=int_kind) ::       &
          k, nt, nt1     ! tracer indices
 
@@ -169,6 +171,11 @@
              if (nt-k==nt_ipnd) &
                 write(nu_diag,*) 'nt_ipnd',nt,depend(nt),tracer_type(nt),&
                                               has_dependents(nt)
+! CMB
+             if (nt-k==nt_fsd) &    
+                write(nu_diag,*) 'nt_fsd  ',  nt,depend(nt),tracer_type(nt),&
+                                              has_dependents(nt)
+! CMB
              if (nt-k==nt_bgc_N_sk) &
                 write(nu_diag,*) 'nt_bgc_sk',nt,depend(nt),tracer_type(nt),&
                                               has_dependents(nt)

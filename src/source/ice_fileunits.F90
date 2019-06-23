@@ -30,6 +30,7 @@
       private
       public :: init_fileunits, get_fileunit, flush_fileunit, &
                 release_fileunit, release_all_fileunits
+      save  ! CMB
 
       character (len=char_len), public :: &
          diag_type               ! 'stdout' or 'file'
@@ -48,6 +49,10 @@
          nu_restart_age, &  ! restart input file for ice age tracer
          nu_dump_FY    , &  ! dump file for restarting first-year area tracer
          nu_restart_FY , &  ! restart input file for first-year area tracer
+!liuxy
+         nu_dump_fsd    , &  ! dump file for restarting floe size distribution area tracer
+         nu_restart_fsd , &  ! restart input file for floe size distribution area tracer
+!liuxy
          nu_dump_lvl   , &  ! dump file for restarting level ice tracers
          nu_restart_lvl, &  ! restart input file for level ice tracers
          nu_dump_pond  , &  ! dump file for restarting melt pond tracer
@@ -119,6 +124,10 @@
          call get_fileunit(nu_restart_age)
          call get_fileunit(nu_dump_FY)
          call get_fileunit(nu_restart_FY)
+!liuxy
+         call get_fileunit(nu_dump_fsd)
+         call get_fileunit(nu_restart_fsd)
+!liuxy
          call get_fileunit(nu_dump_lvl)
          call get_fileunit(nu_restart_lvl)
          call get_fileunit(nu_dump_pond)
@@ -202,6 +211,10 @@
          call release_fileunit(nu_restart_age)
          call release_fileunit(nu_dump_FY)
          call release_fileunit(nu_restart_FY)
+!liuxy
+         call release_fileunit(nu_dump_fsd)
+         call release_fileunit(nu_restart_fsd)
+!liuxy
          call release_fileunit(nu_dump_lvl)
          call release_fileunit(nu_restart_lvl)
          call release_fileunit(nu_dump_pond)

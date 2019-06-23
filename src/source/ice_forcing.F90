@@ -35,7 +35,11 @@
       public :: init_forcing_atmo, init_forcing_ocn, &
                 get_forcing_atmo, get_forcing_ocn, &
                 read_clim_data, read_clim_data_nc, &
-                interpolate_data, interp_coeff_monthly
+                interpolate_data, interp_coeff_monthly, &
+! LR
+                get_forcing_wave, get_wave_spec
+! LR
+      save
 
       integer (kind=int_kind), public :: &
          ycycle          , & ! number of years in forcing cycle
@@ -61,7 +65,11 @@
             sss_file, &
            pslv_file, &
          sublim_file, &
-           snow_file  
+           snow_file, &
+! LR
+           wave_hs_file, &
+           wave_t02_file
+! LR  
 
       character (char_len_long), dimension(ncat) :: &  ! input data file names
         topmelt_file, &
@@ -72,7 +80,9 @@
            ftime              ! forcing time (for restart)
 
       integer (kind=int_kind) :: &
-           oldrecnum = 0      ! old record number (save between steps)
+           oldrecnum = 0 , &       ! old record number (save between steps)
+           oldrecnum_wavehs = 0, & ! old record number (save between steps)
+           oldrecnum_wavetz  = 0   ! old record number (save between steps)
 
       real (kind=dbl_kind), dimension(nx_block,ny_block,max_blocks) :: &
           cldf                ! cloud fraction
@@ -97,7 +107,11 @@
            uocn_data, &
            vocn_data, &
          sublim_data, &
-          frain_data
+          frain_data, &
+! LR
+          wave_hs_data, &
+          wave_t02_data
+! LR
 
       real (kind=dbl_kind), & 
            dimension(nx_block,ny_block,2,max_blocks,ncat) :: &
@@ -117,6 +131,12 @@
       character(char_len_long), public :: & 
          atm_data_dir , & ! top directory for atmospheric data
          ocn_data_dir , & ! top directory for ocean data
+! LR
+         wave_forc_dir , & ! top directory for wave data
+         wave_forc_file, & ! file name for wave data
+         wave_spec_dir, & ! dir+file name for wave spectrum
+         wave_spec_file, & ! dir+file name for wave spectrum
+! LR
          oceanmixed_file  ! file name for ocean forcing data
 
       integer (kind=int_kind), parameter :: & 
@@ -150,8 +170,189 @@
       contains
 
 !=======================================================================
+!=======================================================================
+! Modified by Lettie Roach from other forcing routines
+! Gets wave spectrum from forcing data. 
+! 
+!
+        subroutine get_wave_spec
 
-      subroutine init_forcing_atmo
+
+      use ice_blocks, only: nx_block, ny_block
+      use ice_constants
+      use ice_domain, only: nblocks
+      use ice_domain_size, only: max_blocks, nfsd
+      use ice_flux, only: wave_spectrum, dfreq, freq
+#ifdef ncdf
+      use netcdf
+#endif
+
+      ! local variables
+#ifdef ncdf
+
+      integer (kind=int_kind) :: &
+         fid                  ! file id for netCDF routines
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,25,1,max_blocks) :: &
+         tmp
+
+      character(char_len_long) :: spec_file
+
+        spec_file = trim(wave_spec_dir)//&
+                      '/'//trim(wave_spec_file)
+        call ice_open_nc(spec_file,fid)
+        call ice_read_nc (fid, 1, 'ef',tmp, dbug, &
+                          field_loc_center, field_type_scalar)
+        call ice_close_nc(fid) 
+
+        if (allocated(wave_spectrum)) deallocate(wave_spectrum)
+        allocate(wave_spectrum(nx_block,ny_block, 25, max_blocks))
+        wave_spectrum(:,:,:,:) = tmp(:,:,:,1,:)
+        WHERE (wave_spectrum.gt.bignum) wave_spectrum = c0
+
+        if (allocated(freq)) deallocate(freq)
+        allocate(freq(25))
+
+        if (allocated(dfreq)) deallocate(dfreq)
+        allocate(dfreq(25))
+
+        ! from Wavewatch, set as f(n+1) = C*f(n) where C is a constant set by the user, typically ~ 1.1.
+        ! these freq are for C = 1.1
+        freq = (/0.04118,     0.045298,    0.0498278,   0.05481058,  0.06029164,  0.06632081, &
+                 0.07295289,  0.08024818,  0.08827299,  0.09710029,  0.10681032,  0.11749136, &
+                 0.1292405,   0.14216454,  0.15638101,  0.17201911,  0.18922101,  0.20814312, &
+                 0.22895744,  0.25185317,  0.27703848,  0.30474234,  0.33521661,  0.36873826, &
+                 0.40561208/)
+ 
+        ! boundaries of bin n are at f(n)*sqrt(1/C) and f(n)*sqrt(C) 
+        dfreq(:) = freq(:)*(SQRT(1.1_dbl_kind) - SQRT(c1/1.1_dbl_kind))
+
+#endif
+         end subroutine get_wave_spec
+
+
+!=======================================================================
+! Modified by Lettie Roach from other forcing routines
+! Gets wave fields from forcing data. 
+! 
+!
+        subroutine get_forcing_wave
+
+
+      use ice_blocks, only: nx_block, ny_block
+      use ice_constants
+      use ice_domain, only: nblocks
+      use ice_domain_size, only: max_blocks
+      use ice_flux, only: wave_hs, wave_tz
+#ifdef ncdf
+      use netcdf
+#endif
+
+      ! local variables
+
+      integer (kind=int_kind) :: &
+         i, j, iblk       , & ! horizontal indices
+         k                , & ! month index
+         fid              , & ! file id for netCDF file 
+         nbits
+
+      logical (kind=log_kind) :: diag
+
+      character (char_len) :: & 
+         fieldname            ! field name in netcdf file
+
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks) :: &
+         work1
+
+      integer (kind=int_kind) :: &
+          ixm,ixx,ixp , & ! record numbers for neighboring months
+          recnum      , & ! record number
+          maxrec      , & ! maximum record number
+          recslot     , & ! spline slot for current record
+          dataloc         ! = 1 for data located in middle of time interval
+                          ! = 2 for date located at end of time interval
+
+      real (kind=dbl_kind) :: &
+          sec6hr              ! number of seconds in 6 hours
+
+      logical (kind=log_kind) :: read6
+
+     ftime = time         ! forcing time
+     wave_hs_file = trim(wave_forc_dir)//&
+                     'hs_'//trim(wave_forc_file)
+     call file_year_wave(wave_hs_file,fyear)
+      wave_t02_file = trim(wave_forc_dir)//&
+                      't02_'//trim(wave_forc_file)
+     call file_year_wave(wave_t02_file,fyear)
+     if (my_task == master_task) print *, wave_hs_file
+    !-------------------------------------------------------------------
+    ! 6-hourly data
+    !
+    ! Assume that the 6-hourly value is located at the end of the
+    !  6-hour period.  This is the convention for NCEP reanalysis data.
+    !  E.g. record 1 gives conditions at 6 am GMT on 1 January.
+    !-------------------------------------------------------------------
+
+      dataloc = 2               ! data located at end of interval
+      sec6hr = secday/c4        ! seconds in 6 hours
+      maxrec = 1460             ! 365*4
+
+      ! current record number
+      recnum = 4*int(yday) - 3 + int(real(sec,kind=dbl_kind)/sec6hr)
+
+      ! Compute record numbers for surrounding data
+      ixm = mod(recnum+maxrec-2,maxrec) + 1
+      ixx = mod(recnum-1,       maxrec) + 1
+
+      ! Compute interpolation coefficients
+      ! If data is located at the end of the time interval, then the
+      !  data value for the current record always goes in slot 2.
+
+      recslot = 2
+      ixp = -99
+      call interp_coeff (recnum, recslot, sec6hr, dataloc)
+
+      ! Read
+      read6 = .false.
+      if (istep==1 .or. oldrecnum_wavehs /= recnum) read6 = .true.
+
+      !fieldname='swh'
+      fieldname='hs'
+      call read_data_nc (read6, 0, fyear, ixm, ixx, ixp, &
+                         maxrec, wave_hs_file,fieldname, wave_hs_data, &
+                         field_loc_center, field_type_scalar)
+
+!      WHERE (wave_hs_data.gt.999) wave_hs_data=c0
+!      if ((my_task == master_task) .and. (MAXVAL(wave_hs_data).gt.999)) then
+!          print *, 'WARNING wave_hs_data > 999'
+!          print *, '1 and 2 ',MAXVAL(wave_hs_data(:,:,1,:)), MAXVAL(wave_hs_data(:,:,2,:))
+!      end if
+ 
+      fieldname='t02'
+       call read_data_nc (read6, 0, fyear, ixm, ixx, ixp, &
+                         maxrec, wave_t02_file,fieldname, wave_t02_data, &
+                         field_loc_center, field_type_scalar)
+ 
+      ! Interpolate
+      call interpolate_data (wave_hs_data, wave_hs)
+      call interpolate_data (wave_t02_data, wave_tz)
+
+     ! Save record number for next time step
+      oldrecnum_wavehs = recnum
+
+     ! In case of dodgy data
+      WHERE (wave_hs.gt.999) wave_hs = c0
+      WHERE (wave_hs.lt.0) wave_hs = c0
+      WHERE (wave_tz.gt.999) wave_tz = c0
+      WHERE (wave_tz.lt.0) wave_tz = c0
+
+
+                end subroutine get_forcing_wave
+
+!
+!=======================================================================
+
+             subroutine init_forcing_atmo
 
 ! Determine the current and final year of the forcing cycle based on
 ! namelist input; initialize the atmospheric forcing data filenames.
@@ -712,6 +913,7 @@
 !   is missing.
 !
 ! Adapted by Alison McLaren, Met Office from read_data
+! 2016 Lettie Roach made some changes to read waves
 
       use ice_constants, only: c0
       use ice_diagnostics, only: check_step
@@ -744,6 +946,7 @@
 
 #ifdef ncdf 
       integer (kind=int_kind) :: &
+         i, j,m,iblk,&
          nrec             , & ! record number to read
          n2, n4           , & ! like ixm and ixp, but
                               ! adjusted at beginning and end of data
@@ -777,30 +980,50 @@
          ! currently in first half of data interval
             if (ixx <= 1) then
                if (yr > fyear_init) then ! get data from previous year
-                  call file_year (data_file, yr-1)
+                                !if ((fieldname.ne.'swh').and.(fieldname.ne.'mwp')) then
+                                if ((fieldname.ne.'hs').and.(fieldname.ne.'t02')) then
+                                       call file_year (data_file, yr-1)
+                                else
+                                        call file_year_wave(data_file,yr-1)
+                                end if
                else             ! yr = fyear_init, no prior data exists
                   if (maxrec > 12) then ! extrapolate from first record
-                     if (ixx == 1) n2 = ixx
-                  else          ! go to end of fyear_final
-                     call file_year (data_file, fyear_final)
-                  endif
-               endif            ! yr > fyear_init
-            endif               ! ixx <= 1
+                                        if (ixx == 1) n2 = ixx
+                                else          ! go to end of fyear_final
+                                        !if ((fieldname.ne.'swh').and.(fieldname.ne.'mwp')) then
+                                        if ((fieldname.ne.'hs').and.(fieldname.ne.'t02')) then
+                                               call file_year (data_file, fyear_final)
+                                        else
+                                                call file_year_wave(data_file,fyear_final)
+                                        end if
+ 
+                                endif
+                        endif            ! yr > fyear_init
+                endif               ! ixx <= 1
 
-            call ice_open_nc (data_file, fid)
+                call ice_open_nc (data_file, fid)
 
-            arg = 1
-            nrec = recd + n2
+                arg = 1
+                nrec = recd + n2
 
-            call ice_read_nc & 
-                 (fid, nrec, fieldname, field_data(:,:,arg,:), dbug, &
-                  field_loc, field_type)
+                call ice_read_nc & 
+                         (fid, nrec, fieldname, field_data(:,:,arg,:), dbug, &
+                         field_loc, field_type)
 
-            if (ixx==1) call ice_close_nc(fid)
+! LR                !if (ixx==1) then
+                         !write(*,*) 'ixx<=1: closing ',fid
+                          call ice_close_nc(fid)
+! LR                !end if
          endif                  ! ixm ne -99
-
+        
          ! always read ixx data from data file for current year
-         call file_year (data_file, yr)
+         !if ((fieldname.ne.'swh').and.(fieldname.ne.'mwp')) then
+         if ((fieldname.ne.'hs').and.(fieldname.ne.'t02')) then
+               call file_year (data_file, yr)
+         else
+                call file_year_wave(data_file,yr)
+         end if
+
          call ice_open_nc (data_file, fid)
 
          arg = arg + 1
@@ -811,23 +1034,35 @@
                field_loc, field_type)
 
          if (ixp /= -99) then
-         ! currently in latter half of data interval
-            if (ixx==maxrec) then
-               if (yr < fyear_final) then ! get data from following year
-                  call ice_close_nc(fid)
-                  call file_year (data_file, yr+1)
-                  call ice_open_nc (data_file, fid)
-               else             ! yr = fyear_final, no more data exists
-                  if (maxrec > 12) then ! extrapolate from ixx
-                     n4 = ixx
-                  else          ! go to beginning of fyear_init
-                     call ice_close_nc(fid)
-                     call file_year (data_file, fyear_init)
-                     call ice_open_nc (data_file, fid)
-
-                  endif
-               endif            ! yr < fyear_final
-            endif               ! ixx = maxrec
+                ! currently in latter half of data interval
+                if (ixx==maxrec) then
+                        if (yr < fyear_final) then ! get data from following year
+                                call ice_close_nc(fid)
+                                !if ((fieldname.ne.'swh').and.(fieldname.ne.'mwp')) then
+                                if ((fieldname.ne.'hs').and.(fieldname.ne.'t02')) then
+                                       call file_year (data_file, yr+1)
+                                else
+                                        call file_year_wave(data_file,yr+1)
+                                end if
+                                call ice_open_nc (data_file, fid)
+                        else             ! yr = fyear_final, no more data exists
+                                if (maxrec > 12) then ! extrapolate from ixx
+                                        n4 = ixx
+                                else          ! go to beginning of fyear_init
+                                        call ice_close_nc(fid)
+                                        !if ((fieldname.ne.'swh').and.(fieldname.ne.'mwp')) then
+                                        if ((fieldname.ne.'hs').and.(fieldname.ne.'t02')) then
+                                               call file_year (data_file,fyear_init)
+                                        else
+                                                call file_year_wave(data_file,fyear_init)
+                                        end if
+                                        call ice_open_nc (data_file, fid)
+                                endif
+                        endif            ! yr < fyear_final
+! LR
+                        call ice_close_nc(fid)
+! LR
+                endif               ! ixx = maxrec
 
             arg = arg + 1
             nrec = recd + n4
@@ -1186,6 +1421,35 @@
       end subroutine file_year
 
 !=======================================================================
+
+      subroutine file_year_wave (data_file, yr)
+
+! Construct the correct name of the wave data file
+! to be read, given the year and assuming the naming convention
+! that filenames end with 'yyyy.dat' or 'yyyy.r' or 'yyyy.nc'.
+! Repeat 1979 for years less than 1979 (start year of Era Interim)
+
+      character (char_len_long), intent(inout) ::  data_file
+
+      integer (kind=int_kind), intent(in) :: yr
+
+      character (char_len_long) :: tmpname
+
+      integer (kind=int_kind) :: i
+
+         i = index(data_file,'.nc') - 5
+         tmpname = data_file
+         if (yr.lt.1979) then
+                write(data_file,'(a,i4.4,a)') tmpname(1:i), 1979, '.nc'
+         else
+                write(data_file,'(a,i4.4,a)') tmpname(1:i), yr, '.nc'
+         end if
+
+
+      end subroutine file_year_wave
+
+!=======================================================================
+
 
       subroutine prepare_forcing (nx_block, ny_block, &
                                   ilo, ihi, jlo, jhi, &
@@ -3551,6 +3815,7 @@
       use ice_domain, only: nblocks
       use ice_flux, only: sst, uocn, vocn
       use ice_grid, only: t2ugrid_vector, ANGLET
+      use ice_read_write, only: ice_read_nc_uv
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step

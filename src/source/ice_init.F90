@@ -10,6 +10,9 @@
 ! 2006 ECH: Added namelist variables, warnings.
 !           Replaced old default initial ice conditions with 3.14 version.
 !           Converted to free source form (F90).
+! 2016 CMB: Added floe size distribution area-weighted tracer
+!       LR: Added floe size dependent thermodynamics options
+
 
       module ice_init
 
@@ -19,10 +22,11 @@
       implicit none
 
       character(len=char_len_long) :: &
-         ice_ic      ! method of ice cover initialization
-                     ! 'default'  => latitude and sst dependent
-                     ! 'none'     => no ice
-                     ! note:  restart = .true. overwrites
+! LR set to 'none'
+         ice_ic='none'  ! method of ice cover initialization
+! LR                    ! 'default'  => latitude and sst dependent
+                        ! 'none'     => no ice
+                        ! note:  restart = .true. overwrites
 
 !=======================================================================
 
@@ -64,7 +68,12 @@
           atm_data_type,   atm_data_dir,  precip_units, &
           atm_data_format, ocn_data_format, &
           sss_data_type,   sst_data_type, ocn_data_dir, &
-          oceanmixed_file, restore_sst,   trestore
+          oceanmixed_file, restore_sst,   trestore, &
+! LR
+          wave_forc_dir, wave_forc_file, wave_spec_dir, wave_spec_file
+      use ice_wavebreaking, only: wave_fn_dir, calc_wave
+      use ice_wavefracspec, only: wave_spec
+! LR
       use ice_grid, only: grid_file, gridcpl_file, kmt_file, grid_type, grid_format
       use ice_lvl, only: restart_lvl
       use ice_mechred, only: kstrength, krdg_partic, krdg_redist, mu_rdg, Cf
@@ -95,7 +104,15 @@
 #ifdef CESMCOUPLED
       use shr_file_mod, only: shr_file_setIO
 #endif
-
+! CMB LR
+      use ice_fsd, only: restart_fsd, write_diag_diff, write_diag_wave, &
+                         c_mrg, rdc_frzmlt
+      use ice_fsd_thermo, only: new_ice_fs
+      use ice_domain_size, only: nfsd
+      use ice_state, only: tr_fsd, nt_fsd
+      use ice_therm_shared, only: hfrazilmin
+! CMB LR
+ 
       ! local variables
 
       integer (kind=int_kind) :: &
@@ -124,14 +141,20 @@
         print_global,   print_points,   latpnt,          lonpnt,        &
         dbug,           histfreq,       histfreq_n,      hist_avg,      &
         history_dir,    history_file,                                   &
-        write_ic,       incond_dir,     incond_file, history_precision
+        write_ic,       incond_dir,     incond_file,     write_diag_diff,&
+        write_diag_wave                
 
       namelist /grid_nml/ &
         grid_format,    grid_type,       grid_file,     kmt_file,       &
         kcatbound,      gridcpl_file
 
       namelist /thermo_nml/ &
-        kitd,           ktherm,          conduct,                       &
+        kitd,           ktherm,                                         &
+! LR
+        c_mrg,          new_ice_fs,       rdc_frzmlt,                   &
+        hfrazilmin,                                                     &
+! LR
+        conduct,                                                        &
         a_rapid_mode,   Rac_rapid_mode,  aspect_rapid_mode,             &
         dSdt_slow_mode, phi_c_slow_mode, phi_i_mushy
 
@@ -160,11 +183,18 @@
         oceanmixed_ice, ocn_data_format, sss_data_type, sst_data_type,  &
         ocn_data_dir,   oceanmixed_file, restore_sst,   trestore,       &
         restore_ice,    formdrag,        highfreq,      natmiter,       &
-        tfrz_option
+        tfrz_option, &
+! LR
+        wave_forc_dir,  wave_forc_file,  wave_fn_dir,  calc_wave,       &
+        wave_spec,      wave_spec_dir,   wave_spec_file                 
+! LR
 
       namelist /tracer_nml/   &
         tr_iage, restart_age, &
         tr_FY, restart_FY, &
+! CMB
+        tr_fsd, restart_fsd, &    
+! CMB
         tr_lvl, restart_lvl, &
         tr_pond_cesm, restart_pond_cesm, &
         tr_pond_lvl, restart_pond_lvl, &
@@ -238,6 +268,16 @@
       shortwave = 'default'  ! 'default' or 'dEdd' (delta-Eddington)
       albedo_type = 'default'! or 'constant'
       ktherm = 1             ! 0 = 0-layer, 1 = BL99, 2 = mushy thermo
+! LR
+      c_mrg = 0.01          ! constant of proportionality for floe merging
+      new_ice_fs = 0        ! option for floe size assigned to new ice growth
+      rdc_frzmlt=.false.     ! partitioning of frzmlt (limit for melt)
+      hfrazilmin=0.05_dbl_kind ! min thickness of new frazil ice (m)
+      write_diag_diff=.false. ! if .true., calculate differences in mFSTD, FSD and
+                              ! a_n and save to history file
+      write_diag_wave=.false. ! if .true., save lats/lons from find_wave to 
+                              ! history file 
+! LR
       conduct = 'bubbly'     ! 'MU71' or 'bubbly' (Pringle et al 2007)
       calc_Tsfc = .true.     ! calculate surface temperature
       update_ocn_f = .false. ! include fresh water and salt fluxes for frazil
@@ -290,7 +330,15 @@
       trestore        = 90        ! restoring timescale, days (0 instantaneous)
       restore_ice     = .false.   ! restore ice state on grid edges if true
       dbug      = .false.         ! true writes diagnostics for input forcing
-
+! LR
+      wave_forc_dir = ' ' 
+      wave_forc_file = ' '        ! eORCA1_ww3g_6h_jra55-wave_1979.nc OR gx3
+      wave_spec_dir = ' '
+      wave_spec_file = ' '
+      wave_fn_dir   = ' '
+      calc_wave     = .false.     ! create lookup table for wave fracture 
+      wave_spec     = .false.     ! wave spectrum in ice is available for each gridcell
+! LR
       latpnt(1) =  90._dbl_kind   ! latitude of diagnostic point 1 (deg)
       lonpnt(1) =   0._dbl_kind   ! longitude of point 1 (deg)
       latpnt(2) = -65._dbl_kind   ! latitude of diagnostic point 2 (deg)
@@ -306,7 +354,11 @@
       restart_age  = .false. ! ice age restart
       tr_FY        = .false. ! ice age
       restart_FY   = .false. ! ice age restart
-      tr_lvl       = .false. ! level ice
+! CMB
+      tr_fsd        = .false. ! fsd 
+      restart_fsd   = .false. ! fsd restart  
+! CMB
+      tr_lvl       = .false. ! level ice 
       restart_lvl  = .false. ! level ice restart
       tr_pond_cesm = .false. ! CESM melt ponds
       restart_pond_cesm = .false. ! melt ponds restart
@@ -735,6 +787,14 @@
       call broadcast_scalar(shortwave,          master_task)
       call broadcast_scalar(albedo_type,        master_task)
       call broadcast_scalar(ktherm,             master_task)
+! LR
+      call broadcast_scalar(c_mrg,              master_task)      
+      call broadcast_scalar(new_ice_fs,         master_task)
+      call broadcast_scalar(rdc_frzmlt,         master_task)
+      call broadcast_scalar(hfrazilmin,         master_task)
+      call broadcast_scalar(write_diag_diff,    master_task)
+      call broadcast_scalar(write_diag_wave,    master_task)
+! LR
       call broadcast_scalar(conduct,            master_task)
       call broadcast_scalar(R_ice,              master_task)
       call broadcast_scalar(R_pnd,              master_task)
@@ -782,6 +842,15 @@
       call broadcast_scalar(trestore,           master_task)
       call broadcast_scalar(restore_ice,        master_task)
       call broadcast_scalar(dbug,               master_task)
+! LR
+      call broadcast_scalar(wave_forc_dir,      master_task)
+      call broadcast_scalar(wave_forc_file,     master_task) 
+      call broadcast_scalar(wave_spec_dir,     master_task)
+      call broadcast_scalar(wave_spec_file,     master_task)
+      call broadcast_scalar(wave_fn_dir,        master_task)
+      call broadcast_scalar(calc_wave,          master_task)
+      call broadcast_scalar(wave_spec,          master_task)
+! LR
       call broadcast_array (latpnt(1:2),        master_task)
       call broadcast_array (lonpnt(1:2),        master_task)
       call broadcast_scalar(runid,              master_task)
@@ -795,6 +864,10 @@
       call broadcast_scalar(restart_age,        master_task)
       call broadcast_scalar(tr_FY,              master_task)
       call broadcast_scalar(restart_FY,         master_task)
+! CMB      
+      call broadcast_scalar(tr_fsd,             master_task)  
+      call broadcast_scalar(restart_fsd,        master_task)  
+! CMB
       call broadcast_scalar(tr_lvl,             master_task)
       call broadcast_scalar(restart_lvl,        master_task)
       call broadcast_scalar(tr_pond_cesm,       master_task)
@@ -963,7 +1036,14 @@
          write(nu_diag,1005) ' phi_c_slow_mode           = ', phi_c_slow_mode
          write(nu_diag,1005) ' phi_i_mushy               = ', phi_i_mushy
          endif
-
+! LR        
+         write(nu_diag,1005) ' c_mrg                       = ', c_mrg
+         write(nu_diag,1020) ' new_ice_fs                  = ', new_ice_fs
+         write(nu_diag,1010) ' rdc_frzmlt                  = ', rdc_frzmlt
+         write(nu_diag,1005) ' hfrazilmin                  = ', hfrazilmin
+         write(nu_diag,1020) ' write_diag_diff             = ', write_diag_diff
+         write(nu_diag,1020) ' write_diag_wave             = ', write_diag_wave
+! LR         
          write(nu_diag,1030) ' atmbndy                   = ', &
                                trim(atmbndy)
          write(nu_diag,1010) ' formdrag                  = ', formdrag
@@ -1040,6 +1120,10 @@
          write(nu_diag,1010) ' restart_age               = ', restart_age
          write(nu_diag,1010) ' tr_FY                     = ', tr_FY
          write(nu_diag,1010) ' restart_FY                = ', restart_FY
+! CMB
+         write(nu_diag,1010) ' tr_fsd                    = ', tr_fsd       
+         write(nu_diag,1010) ' restart_fsd               = ', restart_fsd  
+! CMB
          write(nu_diag,1010) ' tr_lvl                    = ', tr_lvl
          write(nu_diag,1010) ' restart_lvl               = ', restart_lvl
          write(nu_diag,1010) ' tr_pond_cesm              = ', tr_pond_cesm
@@ -1109,7 +1193,14 @@
              nt_aero = ntrcr + 1
              ntrcr = ntrcr + 4*n_aero ! 4 dEdd layers, n_aero species
          endif
-
+! CMB              
+         nt_fsd = 0   
+         if (tr_fsd) then
+             nt_fsd = ntrcr + 1   ! tracer index for
+             ntrcr = ntrcr + nfsd ! floe size categories
+         endif
+! CMB              
+              
          nt_iso = 0
          if (tr_iso) then
              nt_iso = ntrcr + 1
@@ -1160,6 +1251,9 @@
       call broadcast_scalar(nt_qice,  master_task)
       call broadcast_scalar(nt_qsno,  master_task)
       call broadcast_scalar(nt_iage,  master_task)
+! CMB
+      call broadcast_scalar(nt_fsd,  master_task)   
+! CMB
       call broadcast_scalar(nt_FY,    master_task)
       call broadcast_scalar(nt_alvl,  master_task)
       call broadcast_scalar(nt_vlvl,  master_task)
@@ -1215,6 +1309,11 @@
       use ice_itd, only: aggregate
       use ice_exit, only: abort_ice
       use ice_therm_shared, only: ktherm, heat_capacity
+! CMB
+      use ice_domain_size, only: nfsd     
+      use ice_state, only: tr_fsd, nt_fsd 
+!CMB
+
 
       integer (kind=int_kind) :: &
          ilo, ihi    , & ! physical domain indices
@@ -1282,6 +1381,9 @@
       enddo
       if (tr_iage) trcr_depend(nt_iage)  = 1   ! volume-weighted ice age
       if (tr_FY)   trcr_depend(nt_FY)    = 0   ! area-weighted first-year ice area
+! CMB
+      if (tr_fsd)   trcr_depend(nt_fsd)    = 0   ! area-weighted fstd  
+! CMB
       if (tr_lvl)  trcr_depend(nt_alvl)  = 0   ! level ice area
       if (tr_lvl)  trcr_depend(nt_vlvl)  = 1   ! level ice volume
       if (tr_pond_cesm) then
@@ -1306,7 +1408,13 @@
             trcr_depend(nt_aero+(it-1)*4+3) = 1 ! ice
          enddo
       endif
-      if (tr_iso) then ! volume-weighted isotopes
+! CMB
+      if (tr_fsd) then ! area-weighted floe-fraction   
+         do it = 1, nfsd
+            trcr_depend(nt_fsd+it-1 ) = 0 ! area-weight
+         enddo
+      endif
+     if (tr_iso) then ! volume-weighted isotopes
          do it = 1, n_iso
             trcr_depend(nt_iso+(it-1)*4  ) = 2 ! snow
             trcr_depend(nt_iso+(it-1)*4+1) = 2 ! snow
