@@ -135,10 +135,12 @@ contains
     call fldlist_add(fldsToIce_num, fldsToIce, 'ocn_current_zonal'       )
     call fldlist_add(fldsToIce_num, fldsToIce, 'ocn_current_merid'       )
     call fldlist_add(fldsToIce_num, fldsToIce, 'freezing_melting_potential')
-    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum', ungridded_lbound=1, ungridded_ubound=25) !TODO: generalize
     if (flds_wiso) then
        call fldlist_add(fldsToIce_num, fldsToIce, 'So_roce_wiso', ungridded_lbound=1, ungridded_ubound=3)
     end if
+
+    ! from wave
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum', ungridded_lbound=1, ungridded_ubound=25) !TODO: generalize
 
     ! from atmosphere
     call fldlist_add(fldsToIce_num, fldsToIce, 'inst_height_lowest'            )
@@ -443,9 +445,11 @@ contains
     allocate(aflds(nx_block,ny_block,nfldv,nblocks))
     aflds = c0
 
-    ! import wave elevation spectrum ??? TODO: fill this in
+    ! import wave elevation spectrum from wave 
+    ! frequencies 1-25 => ungridded_index=1-25
+    !   ice_flux module: wave_spectrum = wave_elevation_spectrum
 
-    call state_getimport(importState, 'wave_elevation_spectrum', output=???, rc=rc)
+    call state_getimport(importState, 'wave_elevation_spectrum', output=wave_elevation, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     n=0
     do iblk = 1, nblocks
@@ -458,7 +462,8 @@ contains
           do i = ilo, ihi
              n = n+1
              do k = 1,25
-                output(i,j,k,iblk)  = dataPtr2d(ungridded_index,n)
+                !HK TODO check indicies are in correct order
+                wave_elevation(i,j,k,iblk)  = output(ungridded_index,n)
           end do
        end do
     end do

@@ -38,6 +38,7 @@
                 interpolate_data, interp_coeff_monthly, &
 ! LR
                 get_forcing_wave, get_wave_spec
+!HK TODO get_forcing_wave - how does this work with CESM?
 ! LR
       save
 
