@@ -330,10 +330,11 @@ contains
     ! local variables
     integer,parameter                :: nflds=15
     integer,parameter                :: nfldv=6
-    integer                          :: i, j, iblk, n
+    integer                          :: i, j, iblk, n, k
     integer                          :: ilo, ihi, jlo, jhi !beginning and end of physical domain
     type(block)                      :: this_block         ! block information for current block
     real (kind=dbl_kind),allocatable :: aflds(:,:,:,:)
+    real (kind=dbl_kind),allocatable :: wave_elevation(:,:,:,:)
     real (kind=dbl_kind)             :: workx, worky
     real (kind=dbl_kind)             :: MIN_RAIN_TEMP, MAX_SNOW_TEMP
     character(len=*),   parameter    :: subname = 'ice_import'
@@ -449,7 +450,7 @@ contains
     ! frequencies 1-25 => ungridded_index=1-25
     !   ice_flux module: wave_spectrum = wave_elevation_spectrum
 
-    call state_getimport(importState, 'wave_elevation_spectrum', output=wave_elevation, rc=rc)
+    call state_getimport(importState, 'wave_elevation_spectrum', output=aflds, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     n=0
     do iblk = 1, nblocks
@@ -463,11 +464,12 @@ contains
              n = n+1
              do k = 1,25
                 !HK TODO check indicies are in correct order
-                wave_elevation(i,j,k,iblk)  = output(ungridded_index,n)
+                wave_spectrum(i,j,k,iblk)  = aflds(k,n)
+             end do
           end do
        end do
     end do
-
+    deallocate(wave_elevation)
     ! Get velocity fields from ocean and atm and slope fields from ocean
 
     call state_getimport(importState, 'ocn_current_zonal', output=aflds, index=1, rc=rc)
