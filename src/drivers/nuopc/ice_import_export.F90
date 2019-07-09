@@ -335,7 +335,6 @@ contains
     integer                          :: ilo, ihi, jlo, jhi !beginning and end of physical domain
     type(block)                      :: this_block         ! block information for current block
     real (kind=dbl_kind),allocatable :: aflds(:,:,:,:)
-    real (kind=dbl_kind),allocatable :: wave_elevation(:,:,:,:)
     real (kind=dbl_kind)             :: workx, worky
     real (kind=dbl_kind)             :: MIN_RAIN_TEMP, MAX_SNOW_TEMP
     character(len=*),   parameter    :: subname = 'ice_import'
