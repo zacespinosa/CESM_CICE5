@@ -24,6 +24,7 @@ module ice_import_export
   use ice_flux           , only : faero_atm, faero_ocn
   use ice_flux           , only : fiso_atm, fiso_ocn, fiso_rain, fiso_evap
   use ice_flux           , only : Qa_iso, Qref_iso, HDO_ocn, H2_18O_ocn, H2_16O_ocn
+  use ice_flux           , only : wave_spectrum !HK
   use ice_state          , only : vice, vsno, aice, aicen_init, trcr
   use ice_grid           , only : tlon, tlat, tarea, tmask, anglet, hm, ocn_gridcell_frac
   use ice_grid           , only : grid_type, t2ugrid_vector
@@ -442,34 +443,28 @@ contains
     enddo        !iblk
     !$OMP END PARALLEL DO
 
-    deallocate(aflds)
-    allocate(aflds(nx_block,ny_block,nfldv,nblocks))
-    aflds = c0
+    
 
     ! import wave elevation spectrum from wave 
     ! frequencies 1-25 => ungridded_index=1-25
     !   ice_flux module: wave_spectrum = wave_elevation_spectrum
+    deallocate(aflds)
+    allocate(aflds(nx_block,ny_block,25,nblocks))
+    !HK TODO what to set this to: aflds = c0
 
-    call state_getimport(importState, 'wave_elevation_spectrum', output=aflds, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    n=0
-    do iblk = 1, nblocks
-       this_block = get_block(blocks_ice(iblk),iblk)
-       ilo = this_block%ilo
-       ihi = this_block%ihi
-       jlo = this_block%jlo
-       jhi = this_block%jhi
-       do j = jlo, jhi
-          do i = ilo, ihi
-             n = n+1
-             do k = 1,25
-                !HK TODO check indicies are in correct order
-                wave_spectrum(i,j,k,iblk)  = aflds(k,n)
-             end do
-          end do
-       end do
+    do k = 1,25
+      call state_getimport(importState, 'wave_elevation_spectrum', output=aflds, index=k, ungridded_index=k, rc=rc)
+      if (ChkErr(rc,__LINE__,u_FILE_u)) return
+      !HK TODO check indicies are in correct order
+      do iblk = 1, nblocks
+         wave_spectrum(:,:,k,iblk)  = aflds(:,:,k,iblk)
+      enddo   
     end do
-    deallocate(wave_elevation)
+
+    deallocate(aflds)
+    allocate(aflds(nx_block,ny_block,nfldv,nblocks))
+    aflds = c0
+
     ! Get velocity fields from ocean and atm and slope fields from ocean
 
     call state_getimport(importState, 'ocn_current_zonal', output=aflds, index=1, rc=rc)
