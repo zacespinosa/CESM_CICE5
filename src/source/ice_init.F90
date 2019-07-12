@@ -121,7 +121,7 @@
 
       character (len=6) :: chartmp
       character (len=32) :: str
-
+      character(len=1000) :: line !HK
       logical :: exists
 
       real (kind=real_kind) :: rpcesm, rplvl, rptopo
@@ -427,6 +427,12 @@
       endif
       call broadcast_scalar(nml_error, master_task)
       if (nml_error /= 0) then
+            !HK  
+            backspace(nu_nml)
+            read(nu_nml,fmt='(A)') line 
+            print*, 'Invalid line in namelist: '//trim(line)
+            close(nu_nml)
+            !HK  
          call abort_ice('ice: error reading namelist')
       endif
       call release_fileunit(nu_nml)
