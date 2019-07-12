@@ -74,13 +74,13 @@
       integer (kind=int_kind) :: i,j,k,ic,n,nn, &
          ncid,status,imtid,jmtid,kmtidi,kmtids,kmtidb, cmtid,timid, &
          length,nvertexid,ivertex, iblk, ii, &
-         kmtidf ! LR
+         kmtidf !LR
       integer (kind=int_kind), dimension(2) :: dimid2
       integer (kind=int_kind), dimension(3) :: dimid3
       integer (kind=int_kind), dimension(4) :: dimidz
       integer (kind=int_kind), dimension(5) :: dimidcz
       integer (kind=int_kind), dimension(3) :: dimid_nverts
-      integer (kind=int_kind), dimension(4) :: dimidex
+      integer (kind=int_kind), dimension(5) :: dimidex ! LR 4->5
       real (kind=real_kind) :: ltime
       character (char_len) :: title
       character (char_len) :: time_period_freq
