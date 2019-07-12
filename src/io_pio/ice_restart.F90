@@ -55,7 +55,7 @@
 
       integer (kind=int_kind) :: status
 
-      if (present(ice_ic)) then
+      if (present(ice_ic)) then 
          filename = trim(ice_ic)
       else
          if (my_task == master_task) then
@@ -132,6 +132,11 @@
                            tr_bgc_Sil_sk, tr_bgc_DMSPp_sk, tr_bgc_DMS_sk, &
                            tr_bgc_chl_sk, tr_bgc_DMSPd_sk, tr_bgc_Am_sk, &
                            skl_bgc
+! liuxy LR
+      use ice_state, only: tr_fsd
+      use ice_domain_size, only: nfsd
+      character*2 ck
+! liuxy LR
 
       character(len=char_len_long), intent(in), optional :: filename_spec
 
@@ -296,7 +301,15 @@
          if (tr_FY) then
             call define_rest_field(File,'FY',dims)
          end if
-
+!liuxy LR
+         if (tr_fsd) then
+                ! Floe size distribution
+                do k=1,nfsd
+                        write(ck,'(i2.2)') k
+                        call define_rest_field(File,'fsd'//'_'//ck,dims)
+                enddo
+         endif
+!liuxy LR 
          if (tr_lvl) then
             call define_rest_field(File,'alvl',dims)
             call define_rest_field(File,'vlvl',dims)
