@@ -142,7 +142,7 @@
         dbug,           histfreq,       histfreq_n,      hist_avg,      &
         history_dir,    history_file,                                   &
         write_ic,       incond_dir,     incond_file,     write_diag_diff,&
-        write_diag_wave                
+        write_diag_wave,  history_precision                
 
       namelist /grid_nml/ &
         grid_format,    grid_type,       grid_file,     kmt_file,       &
