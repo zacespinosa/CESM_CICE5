@@ -32,7 +32,7 @@ module ice_import_export
   use ice_fileunits      , only : nu_diag
   use ice_communicate    , only : my_task, master_task, MPI_COMM_ICE
   use ice_prescribed_mod , only : prescribed_ice
-  use ice_shr_methods    , only : chkerr, state_reset
+  use ice_shr_methods    , only : chkerr, state_reset, state_diagnose
   use perf_mod           , only : t_startf, t_stopf, t_barrierf
 
   implicit none
@@ -140,9 +140,6 @@ contains
        call fldlist_add(fldsToIce_num, fldsToIce, 'So_roce_wiso', ungridded_lbound=1, ungridded_ubound=3)
     end if
 
-    ! from wave
-    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum', ungridded_lbound=1, ungridded_ubound=25) !TODO: generalize
-
     ! from atmosphere
     call fldlist_add(fldsToIce_num, fldsToIce, 'inst_height_lowest'            )
     call fldlist_add(fldsToIce_num, fldsToIce, 'inst_zonal_wind_height_lowest' )
@@ -168,12 +165,15 @@ contains
     ! from - atm dry dust deposition frluxes (4 sizes)
     call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_dstdry', ungridded_lbound=1, ungridded_ubound=4)
 
+    ! from wave - 25 frequencies
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum', ungridded_lbound=1, ungridded_ubound=25) !TODO: generalize
+
+
     do n = 1,fldsToIce_num
        call NUOPC_Advertise(importState, standardName=fldsToIce(n)%stdname, &
             TransferOfferGeomObject='will provide', rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     end do
-
     !-----------------
     ! advertise export fields
     !-----------------
@@ -268,6 +268,8 @@ contains
     call NUOPC_ModelGet(gcomp, importState=importState, exportState=exportState, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
+print*, 'HK inside ice_realize_fields'
+
     if (present(mesh)) then
 
        geomtype = ESMF_GEOMTYPE_MESH
@@ -318,6 +320,7 @@ contains
 
     end if
 
+print*, 'HK end of ice_realize_fields'
   end subroutine ice_realize_fields
 
   !==============================================================================

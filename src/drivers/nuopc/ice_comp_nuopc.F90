@@ -74,7 +74,7 @@ module ice_comp_nuopc
   integer           :: flds_scalar_index_nextsw_cday = 0
 
   integer     , parameter :: dbug = 10
-  integer     , parameter :: debug_import = 0 ! internal debug level
+  integer     , parameter :: debug_import = 1 ! internal debug level
   integer     , parameter :: debug_export = 0 ! internal debug level
   character(*), parameter :: modName =  "(ice_comp_nuopc)"
   character(*), parameter :: u_FILE_u = &
@@ -800,7 +800,6 @@ contains
     !-----------------------------------------------------------------
     ! Realize the actively coupled fields
     !-----------------------------------------------------------------
-
     call ice_realize_fields(gcomp, mesh=Emesh, &
          flds_scalar_name=flds_scalar_name, flds_scalar_num=flds_scalar_num, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -844,6 +843,7 @@ contains
     !--------------------------------
 
     if (dbug > 1) then
+       call State_diagnose(importState,'taco_bell',rc=rc)
        call State_diagnose(exportState,subname//':ES',rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     endif
@@ -946,6 +946,7 @@ contains
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     endif
 
+       call State_diagnose(importState,'taco_bell 2',rc=rc)
     !--------------------------------
     ! Determine time of next atmospheric shortwave calculation
     !--------------------------------
@@ -1038,6 +1039,7 @@ contains
     !--------------------------------
     ! Unpack import state
     !--------------------------------
+       call State_diagnose(importState,'taco_bell 3',rc=rc)
 
     call t_barrierf('cice_run_import_BARRIER',mpi_comm_ice)
     call t_startf ('cice_run_import')

@@ -501,6 +501,7 @@ contains
           return
        endif
        call ESMF_LogWrite(trim(msgString), ESMF_LOGMSG_INFO)
+print*, 'HK state_diagnose cice lrank ', trim(string), ' ',trim(lfieldnamelist(n)),  lrank
     enddo
 
     deallocate(lfieldnamelist)
