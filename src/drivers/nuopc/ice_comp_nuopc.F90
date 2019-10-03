@@ -843,7 +843,7 @@ contains
     !--------------------------------
 
     if (dbug > 1) then
-       call State_diagnose(importState,'taco_bell',rc=rc)
+       !HK note you cannot call state_diagnose(importState) here
        call State_diagnose(exportState,subname//':ES',rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     endif
@@ -946,7 +946,6 @@ contains
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     endif
 
-       call State_diagnose(importState,'taco_bell 2',rc=rc)
     !--------------------------------
     ! Determine time of next atmospheric shortwave calculation
     !--------------------------------
@@ -1039,7 +1038,6 @@ contains
     !--------------------------------
     ! Unpack import state
     !--------------------------------
-       call State_diagnose(importState,'taco_bell 3',rc=rc)
 
     call t_barrierf('cice_run_import_BARRIER',mpi_comm_ice)
     call t_startf ('cice_run_import')
