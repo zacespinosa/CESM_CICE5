@@ -264,14 +264,17 @@ contains
 
     rc = ESMF_SUCCESS
 
+    call ESMF_LogWrite(subname//' start', ESMF_LOGMSG_INFO)
+
     call NUOPC_ModelGet(gcomp, importState=importState, exportState=exportState, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-print*, 'HK inside ice_realize_fields'
 
     if (present(mesh)) then
 
        geomtype = ESMF_GEOMTYPE_MESH
+
+print*, "HK CICE present(mesh)"
 
        call fldlist_realize( &
             state=ExportState, &
@@ -294,6 +297,7 @@ print*, 'HK inside ice_realize_fields'
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     else if (present(grid)) then
+
 
        geomtype = ESMF_GEOMTYPE_GRID
 
@@ -319,7 +323,8 @@ print*, 'HK inside ice_realize_fields'
 
     end if
 
-print*, 'HK end of ice_realize_fields'
+    call ESMF_LogWrite(subname//' done', ESMF_LOGMSG_INFO)
+
   end subroutine ice_realize_fields
 
   !==============================================================================
@@ -1100,6 +1105,7 @@ print*, 'HK end of ice_realize_fields'
     integer                :: n
     type(ESMF_Field)       :: field
     character(len=80)      :: stdname
+    character(len=5)       :: cvalue
     character(len=*),parameter  :: subname='(ice_import_export:fld_list_realize)'
     ! ----------------------------------------------
 
@@ -1116,18 +1122,21 @@ print*, 'HK end of ice_realize_fields'
              if (ChkErr(rc,__LINE__,u_FILE_u)) return
           else
              if (present(mesh)) then
-                call ESMF_LogWrite(trim(subname)//trim(tag)//" Field = "//trim(stdname)//" is connected using mesh", &
-                     ESMF_LOGMSG_INFO)
                 ! Create the field
                 if (fldlist(n)%ungridded_lbound > 0 .and. fldlist(n)%ungridded_ubound > 0) then
                    field = ESMF_FieldCreate(mesh, ESMF_TYPEKIND_R8, name=stdname, meshloc=ESMF_MESHLOC_ELEMENT, &
                         ungriddedLbound=(/fldlist(n)%ungridded_lbound/), &
                         ungriddedUbound=(/fldlist(n)%ungridded_ubound/), &
                         gridToFieldMap=(/2/), rc=rc)
+                   write(cvalue,'(I5)') fldlist(n)%ungridded_ubound
+                   call ESMF_LogWrite(trim(subname)//trim(tag)//" Field = "//trim(stdname)//" is connected using mesh, &
+                       with with ungriddedubound = "//trim(cvalue),  ESMF_LOGMSG_INFO)
                    if (ChkErr(rc,__LINE__,u_FILE_u)) return
                 else
                    field = ESMF_FieldCreate(mesh, ESMF_TYPEKIND_R8, name=stdname, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
                    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+                    call ESMF_LogWrite(trim(subname)//trim(tag)//" Field = "//trim(stdname)//" is connected using mesh", &
+                     ESMF_LOGMSG_INFO)
                 end if
              else if (present(grid)) then
                 call ESMF_LogWrite(trim(subname)//trim(tag)//" Field = "//trim(stdname)//" is connected using grid", &
