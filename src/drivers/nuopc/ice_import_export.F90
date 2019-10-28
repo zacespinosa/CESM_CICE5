@@ -164,8 +164,32 @@ contains
     ! from - atm dry dust deposition frluxes (4 sizes)
     call fldlist_add(fldsToIce_num, fldsToIce, 'Faxa_dstdry', ungridded_lbound=1, ungridded_ubound=4)
 
-    ! from wave - 25 frequencies
-    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum', ungridded_lbound=1, ungridded_ubound=25) !TODO: generalize
+    ! from wave - 25 frequencies separately
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum1')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum2')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum3')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum4')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum5')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum6')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum7')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum8')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum9')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum10')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum11')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum12')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum13')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum14')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum15')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum16')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum17')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum18')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum19')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum20')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum21')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum22')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum23')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum24')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum25')
 
 
     do n = 1,fldsToIce_num
@@ -344,6 +368,7 @@ print*, "HK CICE present(mesh)"
     real (kind=dbl_kind),allocatable :: aflds(:,:,:,:)
     real (kind=dbl_kind)             :: workx, worky
     real (kind=dbl_kind)             :: MIN_RAIN_TEMP, MAX_SNOW_TEMP
+    character(len=2)                 :: fvalue
     character(len=*),   parameter    :: subname = 'ice_import'
     !-----------------------------------------------------
 
@@ -452,14 +477,15 @@ print*, "HK CICE present(mesh)"
     
 
     ! import wave elevation spectrum from wave 
-    ! frequencies 1-25 => ungridded_index=1-25
+    ! frequencies 1-25
     !   ice_flux module: wave_spectrum = wave_elevation_spectrum
     deallocate(aflds)
     allocate(aflds(nx_block,ny_block,25,nblocks))
     !HK TODO what to set this to: aflds = c0
 
     do k = 1,25
-      call state_getimport(importState, 'wave_elevation_spectrum', output=aflds, index=k, ungridded_index=k, rc=rc)
+      write(fvalue, '(I2)') k 
+      call state_getimport(importState, 'wave_elevation_spectrum'//trim(adjustl(fvalue)), output=aflds, index=k, rc=rc)
       if (ChkErr(rc,__LINE__,u_FILE_u)) return
       !HK TODO check indicies are in correct order
       do iblk = 1, nblocks
