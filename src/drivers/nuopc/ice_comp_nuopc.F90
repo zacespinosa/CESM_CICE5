@@ -73,8 +73,8 @@ module ice_comp_nuopc
   integer           :: flds_scalar_index_ny = 0
   integer           :: flds_scalar_index_nextsw_cday = 0
 
-  integer     , parameter :: dbug = 10
-  integer     , parameter :: debug_import = 1 ! internal debug level
+  integer     , parameter :: dbug = 0!10
+  integer     , parameter :: debug_import = 0!1 ! internal debug level
   integer     , parameter :: debug_export = 0 ! internal debug level
   character(*), parameter :: modName =  "(ice_comp_nuopc)"
   character(*), parameter :: u_FILE_u = &
