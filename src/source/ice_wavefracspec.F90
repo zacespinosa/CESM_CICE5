@@ -1,25 +1,44 @@
-! Lettie Roach, NIWA/VUW, June 2016
-! Some of this modified from Chris Horvat's Matlab original
-! Cecilia Bitz changed it a lot in Oct 2018
-! New module for CICE to generate waves and break the FSD
+!
+!  This module contains the subroutines required to fracture sea ice
+!  by ocean surface waves
+!
+!  Theory based on:
+!
+!    Horvat, C., & Tziperman, E. (2015). A prognostic model of the sea-ice 
+!    floe size and thickness distribution. The Cryosphere, 9(6), 2119–2134.
+!    doi:10.5194/tc-9-2119-2015
+!
+!  and implementation described in:
+!
+!    Roach, L. A., Horvat, C., Dean, S. M., & Bitz, C. M. (2018). An emergent
+!    sea ice floe size distribution in a global coupled ocean--sea ice model. 
+!    Journal of Geophysical Research: Oceans, 123(6), 4322–4337. 
+!    doi:10.1029/2017JC013692
+!
+!  now with some modifications to allow direct input of ocean surface wave spectrum.
+!
+!  We calculate the fractures that would occur if waves enter a fully ice-covered 
+!  region defined in one dimension in the direction of propagation, and then apply 
+!  the outcome proportionally to the ice-covered fraction in each grid cell. Assuming
+!  that sea ice flexes with the sea surface height field, strains are computed on this
+!  sub-grid-scale 1D domain. If the strain between successive extrema exceeds a critical
+!  value new floes are formed with diameters equal to the distance between the extrema.
+!
+!  authors: 2016-8 Lettie Roach, NIWA/VUW
 !
       module ice_wavefracspec
 
       use ice_kinds_mod
       use ice_constants
-      use ice_domain_size, only: nfsd, ncat, max_ntrcr, max_blocks
-      use ice_calendar, only: dt
-      use ice_fileunits, only: flush_fileunit
+      use ice_flux, only: dfreq
+      use ice_domain_size, only: nfsd, ncat, nfreq, &
+                                 max_ntrcr, max_blocks
  
       implicit none
       private
-      public :: wave_frac_fsd 
+      public :: wave_frac, icepack_wavefracfsd 
 
-      logical (kind=log_kind), public :: &
-         wave_spec                ! namelist parameter that indicates using ww3 spectrum
 
-      integer (kind=int_kind), parameter :: &
-          nfreqww3    = 25        ! number of spectra in ww3
 
       real, parameter  :: &
                 swh_minval = 0.01_dbl_kind, & ! minimum value of wave height (m)
@@ -36,103 +55,116 @@
       integer (kind=int_kind) :: &
           nx = 10000                          ! number of points in domain
  
+      logical (kind=log_kind), public :: &
+         wave_spec      
 
 !=======================================================================
 
       contains
 
 !=======================================================================
-
-     function get_damfstd_wave(amfstd_init, fracture_hist, frac, fracbreak) &
+!
+!  Calculate the change in the FSD arising from wave fracture
+!
+!  authors: 2017 Lettie Roach, NIWA/VUW
+!
+     function get_damfstd_wave(amfstd_init, fracture_hist, frac) &
                               result(d_amfstd)
 
-     real (kind=dbl_kind), dimension (nfsd), intent(in) :: &
+      real (kind=dbl_kind), dimension (nfsd), intent(in) :: &
          amfstd_init, fracture_hist
 
      real (kind=dbl_kind), dimension (nfsd,nfsd), intent(in) :: &
          frac
 
-     real (kind=dbl_kind), intent(in) :: & 
-         fracbreak
-
      real (kind=dbl_kind), dimension (nfsd) :: &
-         d_amfstd, gain, omega, histtmp
-
-     real (kind=dbl_kind) :: & 
-         runsum
-
+         d_amfstd, loss, gain, omega
  
       integer (kind=int_kind) :: k
 
-      histtmp=fracture_hist
-      omega(1) = c0 ! never fracture the smallest floes
-      runsum = c0
-      do k = 2,nfsd
-	   runsum=runsum+histtmp(k-1)
-           omega(k) = amfstd_init(k)*runsum
-      end do
 
-      omega(:) = omega(:)*fracbreak/dt
+
+      do k = 1,nfsd
+           ! fracture_hist is already normalized
+           omega(k) = amfstd_init(k)*SUM(fracture_hist(1:k-1)) 
+      end do
 
       if (SUM(omega).gt.c1+puny) stop &
           'omega cannot be greater than 1, waves'
                         
-      do k =1,nfsd-1
+      loss = omega
+
+      do k =1,nfsd
            gain(k) = SUM(omega*frac(:,k)) 
       end do
-      gain(nfsd) = c0  ! largest floes never gain more by fracture
 
-      d_amfstd(:) = gain(:) - omega(:)
+      if (gain(nfsd).gt.puny) stop 'largest cat cannot gain, waves'
+      if (loss(1).gt.puny) stop 'smallest cat cannot lose, waves'
+
+       d_amfstd(:) = gain(:) - loss(:)
  
-      if (SUM(d_amfstd(:)).gt.puny) stop 'area not cons, waves'
+      if (ABS(SUM(d_amfstd(:))).gt.puny) stop 'area not cons, waves'
+
+      WHERE (ABS(d_amfstd).lt.puny) d_amfstd = c0 
 
       end  function get_damfstd_wave
 
+!=======================================================================
+!
+!  Adaptive timestepping for wave fracture
+!  See reference: Horvat & Tziperman (2017) JGR, Appendix A
+!
+!  authors: 2018 Lettie Roach, NIWA/VUW
+!
+!
+     function get_subdt_wave(amfstd_init, d_amfstd) &
+                              result(subdt)
+
+      real (kind=dbl_kind), dimension (nfsd), intent(in) :: &
+         amfstd_init, d_amfstd
+
+      real (kind=dbl_kind), dimension (nfsd) :: &
+         check_dt 
+ 
+      integer (kind=int_kind) :: k
+
+      real (kind=dbl_kind) :: subdt
+
+      check_dt(:) = bignum 
+      do k = 1, nfsd
+          if (d_amfstd(k).gt.puny) check_dt(k) = (c1-amfstd_init(k))/d_amfstd(k)
+          if (d_amfstd(k).lt.-puny) check_dt(k) = amfstd_init(k)/ABS(d_amfstd(k))
+      end do 
+            
+      subdt = MINVAL(check_dt)
+
+
+
+      end function get_subdt_wave
 
 !=======================================================================
-!  Author: Lettie Roach, NIWA, 2018
+! Author: Lettie Roach, NIWA, 2019
 ! 
-! Given fracture histogram computed from local wave spectrum, evolve FSD
+! Wrapper routine for wave_frac_fsd
 
-     subroutine wave_frac_fsd
+     subroutine icepack_wavefracfsd
 
-     use ice_communicate, only: my_task
      use ice_domain, only: nblocks, blocks_ice
-     use ice_blocks, only: block, get_block, nx_block, ny_block
+     use ice_blocks, only: block, get_block
      use ice_state, only: nt_fsd, aice, aicen, vice, &
-                          vicen, trcrn, nt_qice
-     use ice_flux, only: wave_spectrum
-     use ice_fsd, only: d_afsd_wave, d_amfstd_wave, check_mfstd
+                          trcrn
+     use ice_flux, only: wave_spectrum, wave_hs_in_ice
+     use ice_fsd, only: d_afsd_wave, d_amfstd_wave
  
      ! local variables
       type (block) :: &
          this_block      ! block information for current block
 
       integer (kind=int_kind) :: &  
-        iblk, n, k, i, j, t, &
-        ilo, ihi, jlo, jhi    ! beginning and end of physical domain
+        iblk, i, j, &
+        ilo, ihi, jlo, jhi ! beginning and end of physical domain
 
-      real (kind=dbl_kind), dimension (nfsd) :: &
-        fracture_hist
-
-      real (kind=dbl_kind) :: &
-         fracbreak                  ! how much of cell experiences breaking
-
-      real (kind=dbl_kind), dimension (nfsd, nfsd) :: &
-        frac    
-
-      real (kind=dbl_kind) :: &
-        hbar, elapsed_t, subdt, normalizer
-
-      real (kind=dbl_kind), dimension (nfsd) :: &
-         amfstd_init, &     ! tracer array
-         amfstd_tmp, d_amfstd_tmp, &
-         check_dt
-
-
-     !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,n,k,hbar,fracbreak,frac,normalizer,fracture_hist,amfstd_init,amfstd_tmp,elapsed_t,d_amfstd_tmp,check_dt,subdt)
-!!!     !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block,hbar,fracbreak,frac,normalizer,amfstd_init,amfstd_tmp,d_amfstd_tmp,n,k,check_dt,subdt,elapsed_t,trcrn,d_amfstd_wave,d_afsd_wave)
-
+     !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block)
      do iblk = 1, nblocks
 
          this_block = get_block(blocks_ice(iblk),iblk)         
@@ -141,148 +173,253 @@
          jlo = this_block%jlo
          jhi = this_block%jhi
 
-         d_afsd_wave(ilo:ihi,jlo:jhi,:,iblk) = c0
-
-         if (ANY(trcrn(ilo:ihi,jlo:jhi,nt_fsd:nt_fsd+nfsd-1,:,iblk).lt.c0)) stop 'neg b4-wb'
-
          do j = jlo, jhi
          do i = ilo, ihi
 
-            if ((aice(i,j,iblk).gt.0.0001).and.(.NOT.(ALL(wave_spectrum(i,j,:,iblk).lt.puny)))) then
+            d_afsd_wave(i,j,:,iblk) = c0
+            ! LR this condition is FOR TESTING ONLY when using dummy wave spectrum
+            ! do not use for actual runs!!
+            if (aice(i,j,iblk).lt.0.8_dbl_kind) &
 
-                hbar = vice(i,j,iblk) / aice(i,j,iblk)
-
-                call  wave_frac(hbar, wave_spectrum(i,j,:,iblk), fracture_hist, fracbreak)
-
-!         write(*,10) 'fracbreak',hbar,fracbreak,wave_spectrum(i,j,:,iblk), fracture_hist, size(wave_spectrum(i,j,:,iblk)), size(fracture_hist)
-!         write(*,*)'fracbreak*', fracbreak
-!10       format(1X,A9,2x,F8.5,2X,F8.4,5x,25(F8.5,1x),5x,12(F8.5,1x),5x,I5,2x,I5)
-
-
-                if (fracbreak.gt.puny) then
-
-                  ! frac does not vary within subcycle and does not depend on cat
-                  frac(:,:) = c0
-                  do k = 2, nfsd
-                    frac(k,:k-1) = fracture_hist(:k-1)
-                    normalizer = SUM(frac(k,:))
-                    if (normalizer.gt.c0) frac(k,:) = frac(k,:)/normalizer
-                  end do
-
-                  do n = 1, ncat
-                    if ((aicen(i,j,n,iblk).gt.puny).and.&
-                       (SUM(trcrn(i,j,nt_fsd+1:nt_fsd+nfsd-1,n,iblk)).gt.puny).and.&
-                       (.NOT.(trcrn(i,j,nt_fsd+1,n,iblk).ge.c1))) then
-                       
-                        amfstd_init=trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk)
-
-                        if (ABS(SUM(amfstd_init)-c1).gt.puny) stop &
-                                'init mFSTD not norm, wave'
-                        
-                        ! protect against small numerical errors
-                        WHERE (amfstd_init.lt.puny) amfstd_init = c0
-                        amfstd_init = amfstd_init / SUM(amfstd_init)
-
-                        amfstd_tmp =  amfstd_init
-
-                        ! adaptive sub-timestep
-                        elapsed_t = c0
-                        DO WHILE (elapsed_t.lt.dt)
-
-                             ! calculate d_amfstd using current afstd
-                             d_amfstd_tmp = get_damfstd_wave(amfstd_tmp, fracture_hist, frac, fracbreak)
-                             WHERE (ABS(d_amfstd_tmp).lt.puny) d_amfstd_tmp = c0 
- 
-                             ! ensure timestep does not allow afstd to have any negatives
-			     check_dt(:) = bignum 
-			     do k = 1, nfsd
-			        if (d_amfstd_tmp(k).gt.puny) check_dt(k) = (c1-amfstd_tmp(k))/d_amfstd_tmp(k)
-				if (d_amfstd_tmp(k).lt.-puny) check_dt(k) = -amfstd_tmp(k)/d_amfstd_tmp(k)
-		             end do 
-                             subdt = MINVAL(check_dt)
-                             subdt = MIN(subdt, dt-elapsed_t)
-
-                             ! update amfstd and elpased time
-                             amfstd_tmp = amfstd_tmp + subdt * d_amfstd_tmp
-!                write(*,"(15F7.4)") subdt, d_amfstd_tmp
-
-                             ! check conservation and negatives
-                             if (ANY(amfstd_tmp.lt.-puny)) stop &
-                                     'wb, <0 in loop'
-
-                             if (ANY(amfstd_tmp.gt.c1+puny)) stop &
-                                     'wb, >1 in loop'
-
-! am getting n=1 cat fill up with nan though
-! adding this write statement eliminated the NaN but still have times when subdt is reduced
-!          write(*,10)'fracbraak*', i,j,n,iblk,elapsed_t,subdt, fracbreak, amfstd_tmp, d_amfstd_tmp
-
-                             ! in case of small numerical errors
-                             WHERE (amfstd_tmp.lt.puny) amfstd_tmp = c0
-                             amfstd_tmp = amfstd_tmp/SUM(amfstd_tmp)
-
-                            ! update time
-                             elapsed_t = elapsed_t + subdt 
-
-                        END DO
-
-!          write(*,10)'fracbreak*', i,j,n,iblk,elapsed_t,subdt, fracbreak, amfstd_tmp, amfstd_init
-!10       format(1X,A9,2x,4(I2,1x),2x,2(F10.1,1x),2x,50(F8.5,1x))
-!         call flush_fileunit(6)
-
-                       ! was already normalized in loop
-                        trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk) = amfstd_tmp
-     
-                        if (ABS(SUM(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk))-c1).gt.puny) stop 'not 1 wb'
-
-                        ! for diagnostics
-                        d_amfstd_wave(i,j,:,n,iblk) = trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk) - amfstd_init
-                        d_afsd_wave(i,j,:,iblk) = d_afsd_wave(i,j,:,iblk) + aicen(i,j,n,iblk)*d_amfstd_wave(i,j,:,n,iblk)
-
-                    end if ! aicen>puny
-                    end do ! n
-
-                end if ! not all frac zero
-            end if ! aice>p01
-
+            call wave_frac_fsd(aice(i,j,iblk),  vice(i,j,iblk),        & ! in 
+                               aicen(i,j,:,iblk),                      & ! in
+                               wave_spectrum(i,j,:,iblk),              & ! in
+                               trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:,iblk), & ! inout
+                               wave_hs_in_ice(i,j,iblk),               & ! out
+                               d_afsd_wave(i,j,:,iblk),                & ! out
+                               d_amfstd_wave(i,j,:,:,iblk)             ) ! out
+            
          end do ! i
          end do  !j
 
-         if (ANY(trcrn(ilo:ihi,jlo:jhi,nt_fsd:nt_fsd+nfsd-1,:,iblk).lt.c0)) stop 'wavebreak neg wb'
-         if (ANY(trcrn(ilo:ihi,jlo:jhi,nt_fsd:nt_fsd+nfsd-1,:,iblk).gt.c1)) stop 'wavebreak >1 wb'
-
      end do ! iblk
      !$OMP END PARALLEL DO
+
+
+     end subroutine icepack_wavefracfsd
+
+
+
+!=======================================================================
+! 
+!  Given fracture histogram computed from local wave spectrum, evolve 
+!  the floe size distribution
+!
+!  authors: 2018 Lettie Roach, NIWA/VUW
+!
+
+
+     subroutine wave_frac_fsd(aice,  vice,        & ! in 
+                              aicen,              & ! in
+                              wave_spectrum,      & ! in
+                              trcrn,              & ! inout
+                              wave_hs_in_ice,     & ! out
+                              d_afsd_wave,        & ! out
+                              d_amfstd_wave       ) ! out
+            
+
+
+     use ice_calendar, only: dt
+
+     real (kind=dbl_kind), intent(in) :: &
+         aice, &
+         vice
+
+     real (kind=dbl_kind), dimension(ncat), intent(in) :: &
+         aicen
+
+     real (kind=dbl_kind), dimension(nfreq), intent(in) :: &
+         wave_spectrum
+
+     real (kind=dbl_kind), dimension(nfsd,ncat), intent(inout) :: &
+         trcrn
+
+     real (kind=dbl_kind), intent(out) :: &
+         wave_hs_in_ice
+
+     real (kind=dbl_kind), dimension(nfsd), intent(out) :: &
+         d_afsd_wave
+
+      real (kind=dbl_kind), dimension(nfsd,ncat), intent(out) :: &
+         d_amfstd_wave 
+
+     ! local variables
+      integer (kind=int_kind) :: &  
+        n, k, ks, t, &
+        nsubt ! number of subcycles 
+
+      real (kind=dbl_kind), dimension (nfsd) :: &
+        fracture_hist
+
+      real (kind=dbl_kind), dimension (nfsd, nfsd) :: &
+        frac    
+
+      real (kind=dbl_kind) :: &
+        hbar, elapsed_t, subdt, cons_error
+
+      real (kind=dbl_kind), dimension (nfsd) :: &
+           amfstd_init     ! tracer array
+
+      real (kind=dbl_kind), dimension (nfsd) :: &
+         amfstd_tmp, d_amfstd_tmp, &
+         stability_test, &   ! check timestep stability
+         omega, &
+         check_dt, &
+         gain, loss, &
+         tempfracs
+
+    !------------------------------------
+
+    ! initialize 
+    d_afsd_wave(:) = c0
+    d_amfstd_wave(:,:) = c0
+    wave_hs_in_ice = c0
+    fracture_hist(:) = c0
+
+    ! sanity check
+    if (ANY(trcrn(:,:).lt.c0)) stop 'neg b4-wb'
+
+    ! do not try to fracture for minimal ice concentration or zero wave spectrum
+    if ((aice.gt.p01).and.(.NOT.(ALL(wave_spectrum(:).lt.puny)))) then
+
+        ! save for diagnostics
+        wave_hs_in_ice = c4*SQRT(SUM(wave_spectrum(:)*dfreq(:)))
+
+        hbar = vice / aice
+
+        ! calculate fracture histogram
+        call  wave_frac(hbar, wave_spectrum(:), fracture_hist)
+
+        ! if fracture occurs
+        if (.not. ALL(fracture_hist.lt.puny)) then
+
+            do n = 1, ncat
+
+                if ((aicen(n).gt.puny).and.&
+                    (SUM(trcrn(:,n)).gt.puny).and.&
+                    (.NOT.(trcrn(1,n).ge.c1))) then
+                           
+                    ! for diagnostics
+                    amfstd_init(:) = trcrn(:,n)
+
+                           
+                    ! protect against small numerical errors
+                    WHERE (amfstd_init.lt.puny) amfstd_init = c0
+                    amfstd_init = amfstd_init(:) / SUM(amfstd_init(:))
+
+                    amfstd_tmp =  amfstd_init
+
+                    ! frac does not vary within subcycle
+                    frac(:,:) = c0
+                    do k = 2, nfsd
+                            frac(k,:k-1) = fracture_hist(:k-1)
+                            frac(k,k:) = c0 
+                    end do
+                    
+                    do ks=1,nfsd
+                        if (SUM(frac(ks,:)).gt.c0) frac(ks,:) = frac(ks,:)/SUM(frac(ks,:))
+                    end do
+
+                    ! adaptive sub-timestep
+                    elapsed_t = c0
+                    cons_error = c0
+                    DO WHILE (elapsed_t.lt.dt)
+
+                         ! calculate d_amfstd using current afstd
+                         d_amfstd_tmp = get_damfstd_wave(amfstd_tmp, fracture_hist, frac)
+
+ 
+                         ! timestep required for this
+                         subdt = get_subdt_wave(amfstd_tmp, d_amfstd_tmp)
+                         subdt = MIN(subdt, dt) ! cannot be greater than CICE timestep
+
+                         ! update amfstd and elpased time
+                         amfstd_tmp = amfstd_tmp + subdt * d_amfstd_tmp(:)
+
+                         ! check conservation and negatives
+                         if (ANY(amfstd_tmp.lt.-puny)) stop &
+                                 'wb, <0 in loop'
+
+                         if (ANY(amfstd_tmp.gt.c1+puny)) stop &
+                                 'wb, >1 in loop'
+                         ! update time
+                         elapsed_t = elapsed_t + subdt 
+
+                    END DO
+
+                    ! In some cases---particularly for strong fracturing---the equation 
+                    ! for wave fracture does not quite conserve area. With this test wave
+                    ! forcing, the area conservation error is usually less than 10^-8.
+                    ! Simply renormalizing may cause the first floe size category to reduce,
+                    ! which is not physically allowed to happen. So as a rather blunt fix,
+                    ! we adjust the largest floe size category possible to account for the
+                    ! tiny extra area.
+                    cons_error = SUM(amfstd_tmp) - c1
+                    if (ABS(cons_error).gt.1.0e-8_dbl_kind) print *, 'Area conservation error, waves ',cons_error
+
+                    do k = nfsd, 1, -1
+                        if (amfstd_tmp(k).gt.cons_error) then
+                            amfstd_tmp(k) = amfstd_tmp(k) - cons_error
+                            EXIT
+                        end if
+                    end do
+
+                    ! update trcrn    
+                    trcrn(:,n) = amfstd_tmp/SUM(amfstd_tmp)
+
+                    if ((trcrn(1,n) - amfstd_init(1)).lt.(c0-puny)) then
+                        print *, trcrn(1,n) - amfstd_init(1)
+                        print *, 'sum aftsd_tmp ',SUM(amfstd_tmp)
+                        print *, 'aftsd_tmp ',amfstd_tmp
+                        stop 'Wave frac in smallest cat'
+                    end if
+
+
+                    ! sanity checks
+                    if (ANY(trcrn(:,n).lt.c0-puny)) stop 'neg wb'
+                    if (ANY(trcrn(:,n).gt.c1+puny)) stop '>1 wb'
+
+                    ! for diagnostics
+                    d_amfstd_wave(:,n) = trcrn(:,n) - amfstd_init(:)  
+                    d_afsd_wave(:) =  d_afsd_wave(:) + aicen(n)*d_amfstd_wave(:,n)
+
+
+                end if ! aicen>puny
+            end do ! n
+
+        end if ! not all frac zero
+    end if ! aice>p01
+        
 
      end subroutine wave_frac_fsd
 
 
 !=======================================================================
-! Author: Lettie Roach, NIWA, 2018
 !
-! Based on MatLab code from Horvat & Tziperman (2015). Calculates functions 
-! to describe the change in the FSD when waves fracture ice, given a wave
-! spectrum (1D frequency, 25 frequency bins) in ice. 
-! We calculate extrema and if these are successive maximum, minimum, maximum or
-! vice versa, and have strain greater than a critical strain, break ice and 
-! create new floes with lengths equal to these distances
+!  Calculates functions to describe the change in the FSD when waves 
+!  fracture ice, given a wave spectrum (1D frequency, 25 frequency bins)
+!  in ice. We calculate extrema and if these are successive maximum, 
+!  minimum, maximum or vice versa, and have strain greater than a 
+!  critical strain, break ice and create new floes with lengths equal
+!  to these distances. Based on MatLab code written by Chris Horvat,
+!  from Horvat & Tziperman (2015). 
+!
+!  Note that a realization of sea surface height requires a random phase.
+!
+!  authors: 2018 Lettie Roach, NIWA/VUW
 
-     subroutine wave_frac(hbar, spec_efreq,frac_local,fracbreak)
+     subroutine wave_frac(hbar, spec_efreq, frac_local)
 
-     use ice_communicate, only: my_task, master_task
-     use ice_fsd, only: floe_rad_l, floe_binwidth, floe_rad_c, floe_rad_h
+     use ice_fsd, only: floe_rad_l, floe_rad_c
      use ice_domain_size, only: nfsd
-     use ice_flux, only: freq, dfreq
+     use ice_flux, only: freq
  
      real (kind=dbl_kind),  intent(in) :: &
          hbar   ! mean ice thickness
-
-     real (kind=dbl_kind), dimension(nfreqww3), intent(in) :: &
+! TEMP INOUT
+     real (kind=dbl_kind), dimension(nfreq), intent(in) :: &
          spec_efreq
  
-     real (kind=dbl_kind),  intent(out) :: &
-         fracbreak                  ! how much of cell experiences breaking
-
      real (kind=dbl_kind), dimension (nfsd), intent(out) :: &
          frac_local
 
@@ -290,46 +427,164 @@
 
      integer (kind=int_kind) :: i, j, k
 
-     real (kind=dbl_kind), dimension(nfreqww3) :: &
+     integer, parameter :: &
+         loopcts = 1    ! number of SSH realizations
+
+     real (kind=dbl_kind), dimension(25) :: &
+         spec_elambda, &
          reverse_spec_elambda, &
-         reverse_lambda,       & ! wavelengths (m) in decreasing order
-         reverse_dlambda,      &
+         reverse_lambda, lambda,&! wavelengths (m)
+         reverse_dlambda, dlambda, &
          spec_coeff, &
          phi, rand_array, summand
 
-     real (kind=dbl_kind) ::  normalizer
-
-! this needs to be 2*nx/threshold
-     real (kind=dbl_kind), dimension(20000) :: &
-         fixfraclengths
-
-! this needs to be nx/threshold
-     real (kind=dbl_kind), dimension(nx) :: &
-         fixfraclengths2
+     real (kind=dbl_kind), dimension(2*nx) :: &
+         fraclengths
 
      real (kind=dbl_kind), dimension(nx) :: &
-          Xsub, eta
+          X, eta
 
      real (kind=dbl_kind), dimension(nfsd) :: &
-          frachistogram 
+                frachistogram 
 
      logical (kind=log_kind) :: &
            e_stop          ! if true, stop and return zero omega and fsdformed
 
 
-!!!!!!!!
-        ! local to old get_fraclengths subroutine
+     ! switch that aborts fracture calc if true
+     e_stop=.false.
+ 
+     ! spatial domain
+     do j=1,nx
+        X(j)= j*dx
+     end do
+
+
+     ! dispersion relation
+     reverse_lambda(:) = gravit/(c2*pi*freq(:)**c2)
+     reverse_dlambda(:) = gravit/(c2*pi*dfreq(:)**c2)
+
+     ! convert to lambda spectrum
+     reverse_spec_elambda(:) = spec_efreq(:) * &
+                          (p5 * (gravit/(2*pi*reverse_lambda(:)**c3) )**p5 )    
+ 
+     ! reverse lambda
+     lambda(:) = reverse_lambda(25:1:-1)
+     dlambda(:) = reverse_dlambda(25:1:-1)
+     spec_elambda(:) = reverse_spec_elambda(25:1:-1) 
+ 
+     ! spectral coefficients
+     spec_coeff = sqrt(c2*spec_elambda*dlambda)
+     if (ANY(ISNAN(spec_coeff))) stop 'NaN spec_coeff' 
+
+     ! initialize fracture lengths
+     fraclengths(:)=c0
+     
+     ! loop over n. realizations of SSH
+     do i=1,loopcts
+
+         ! random phase for each Fourier component
+         ! varies in each j loop
+         ! LR took out the call to random number
+         ! and set phase to constant
+         ! Constant phase should NOT BE USED for actual runs
+         rand_array(:) = p5
+         !!call RANDOM_NUMBER(rand_array)
+         phi = c2*pi*rand_array
+ 
+         do j=1,nx
+             !SSH field in space (sum over wavelengths, no attenuation)
+             summand = spec_coeff*COS(2*pi*X(j)/lambda+phi)
+             eta(j)=SUM(summand)
+         end do
+         
+         if ((.NOT.(ALL(eta.eq.c0))).and.(hbar.gt.puny)) then 
+            call get_fraclengths(X, eta, fraclengths, hbar , e_stop)
+         end if
+     end do
+ 
+     if (ALL(fraclengths(:).eq.c0)) e_stop = .true.
+
+     frachistogram(:)=c0
+
+
+     if (.not. e_stop) then
+
+                ! convert from diameter to radii
+                fraclengths(:)=fraclengths(:)/c2
+
+                ! bin into FS cats
+                ! highest cat cannot be fractured into
+                do j=1,size(fraclengths)
+                        do k=1,nfsd-1
+                                if ((fraclengths(j).ge.floe_rad_l(k)).and.(fraclengths(j).lt.floe_rad_l(k+1))) then
+                                        frachistogram(k)=frachistogram(k)+1
+                                end if
+                        end do
+
+                        ! sanity check
+                        if (fraclengths(j).lt.(floe_rad_l(1)-puny)) then
+                            if (fraclengths(j).gt.puny) stop 'fractures too small'
+                        end if
+
+                end do
+     end if
+ 
+     do k=1,nfsd
+         frac_local(k)=floe_rad_c(k)*frachistogram(k)
+     end do
+
+     ! normalize to one (not D/2, as no longer multiply by fraction of domain reached by waves)              
+     if (SUM(frac_local).ne.c0) frac_local(:) = frac_local(:) / SUM(frac_local(:))
+
+
+     end subroutine wave_frac
+
+!===========================================================================
+!
+!  Given the (attenuated) sea surface height, find the strain across triplets
+!  of max, min, max or min, max, min (local extrema within 10m).
+!  If this strain is greater than the  critical strain, ice can fracture
+!  and new floes are formed with sizes equal to the distances between
+!  extrema. Based on MatLab code written by Chris Horvat,
+!  from Horvat & Tziperman (2015). 
+!
+!  authors: 2016 Lettie Roach, NIWA/VUW
+!
+        subroutine get_fraclengths(X, eta, fraclengths, hbar, e_stop)
+
+
+        real (kind=dbl_kind) :: &
+                hbar
+
+        real (kind=dbl_kind), intent(in), dimension (nx) :: &
+                X, eta
+ 
+        real (kind=dbl_kind), intent(inout), dimension (2*nx) :: &
+                fraclengths  ! the biggest number of fraclengths we could have is
+                             ! two floe pieces created at each subgridpoint ie. 2*nx
+                             ! This will never actually happen - most of the array
+                             ! will be zeros
+ 
+        logical (kind=log_kind), intent(inout) :: &
+                e_stop          ! if true, stop and return zero omega and fsdformed
+
+
+        ! local
         integer (kind=int_kind) :: &
                 spcing, &       ! distance in dx over which to search for extrema on each side of point
+                j, k, &         ! indices to iterate over domain
                 first, last, &  ! indices over which to search for extrema
                 j_neg, &        ! nearest extrema backwards
                 j_pos, &        ! nearest extrema forwards
-                nlengths        ! number of points where strain is above
+                n_above         ! number of points where strain is above
                                 ! critical strain
         
 
          real (kind=dbl_kind), dimension(nx) :: &
-                strain          ! the strain between triplets of extrema
+                strain, &        ! the strain between triplets of extrema
+                frac_size_one, & !
+                frac_size_two
 
         logical (kind=log_kind), dimension(nx) :: &
                 is_max, is_min, &       ! arrays to hold whether each point is a local max or min
@@ -342,43 +597,7 @@
 
        integer (kind=int_kind), dimension(1) :: &
         maxj, minj  ! indices of local max and min
-!!!!!!!!
 
-     ! switch that aborts fracture calc if true
-     e_stop=.false.
- 
-     ! dispersion relation
-     reverse_lambda(:) = gravit/(c2*pi*freq(:)**c2)   ! CMB lambda in decreasing order
-     reverse_dlambda(:) = gravit/(c2*pi*dfreq(:)**c2)
-
-     ! convert to lambda spectrum
-     reverse_spec_elambda(:) = spec_efreq(:) * &
-                          (p5 * (gravit/(c2*pi*reverse_lambda(:)**c3) )**p5 )    
- 
- 
-     ! spectral coefficients
-     spec_coeff = sqrt(c2*reverse_spec_elambda*reverse_dlambda)
-     if (ANY(ISNAN(spec_coeff))) stop 'NaN spec_coeff' 
-
-         ! random phase for each Fourier component
-         ! varies in each j loop
-         call RANDOM_NUMBER(rand_array)
-         phi = c2*pi*rand_array
-!	 write(*,*) 'phi',phi
- 
-         do j=1,nx
-             ! spatial domain
-             Xsub(j)= j*dx
-             !SSH field in space (sum over wavelengths, no attenuation)
-             summand = spec_coeff*COS(2*pi*Xsub(j)/reverse_lambda+phi)
-             eta(j)=SUM(summand)
-         end do
-         
-    if ((.NOT.(ALL(eta.eq.c0))).and.(hbar.gt.puny)) then 
-
-! CMB moved the subroutine here and removed allocating arrays, etc
-!            call get_fraclengths(eta, fraclengths, hbar , e_stop)
-!!!!!!!!!!
 
        ! -------equivalent of peakfinder2
        !given eta and spcing, compute extremelocs in ascending order
@@ -389,13 +608,15 @@
        is_extremum = .false.
        is_triplet = .false.
        strain = c0
+       frac_size_one = c0
+       frac_size_two = c0
        j_neg = 0
        j_pos = 0      
- 
+       fraclengths(:) = c0
+
        ! search for local max and min within spacing of
        ! 10m on either side of each point
 
-       nlengths = 0
        do j = 1, nx
 
                 first = MAX(1,j-spcing)
@@ -414,7 +635,7 @@
                 if (minj(1)+first-1.eq.j) is_min(j) = .true.
 
                 if (is_min(j).and.is_max(j)) then
-                         print *, 'X ',Xsub
+                         print *, 'X ',X
                          print *, 'eta ',eta
                          print *, 'frst last' ,first, last
                          print *, 'maxj, minj ',maxj,minj
@@ -453,18 +674,16 @@
 
                         ! calculate strain
                         if (is_triplet(j)) then
-                                delta_pos = Xsub(j_pos) - Xsub(j)
-                                delta = Xsub(j) - Xsub(j_neg)
+                                delta_pos = X(j_pos) - X(j)
+                                delta = X(j) - X(j_neg)
                                 strain(j) = (hbar/c2) *(eta(j_neg)*delta_pos - &
                                         eta(j)*(delta_pos+delta) + eta(j)*delta ) &
                                         /(delta*delta_pos*(delta+delta_pos))
 
 
                                 if (strain(j).gt.straincrit) then
-					nlengths=nlengths+1
-            				fixfraclengths(nlengths)=delta_pos
-  					fixfraclengths2(nlengths)=delta
-
+                                        frac_size_one(j) = X(j_pos) - X(j)
+                                        frac_size_two(j) = X(j) - X(j_neg)
                                 end if
                         end if
 
@@ -472,58 +691,22 @@
 
         end do
 
-        fixfraclengths((nlengths+1):(2*nlengths)) = fixfraclengths2(1:nlengths)
-	nlengths = 2*nlengths
+        n_above = COUNT(strain.gt.straincrit)
+        if (n_above.gt.0) then
+                fraclengths(1:nx) = frac_size_one(:)
+                fraclengths(nx+1:2*nx) = frac_size_two(:)
 
-     else
-       nlengths = 1
-       fixfraclengths(1) = c0
-     end if
+                e_stop = .false.
+        else
+                e_stop = .true.
 
-!!!!!!!!!!
+        end if
 
-     fracbreak=min(1.0,SUM(fixfraclengths(1:nlengths))/D)
-
-     if (nlengths.eq.1) e_stop = .true.  ! do not bother to break
-     if (fracbreak.le.puny) e_stop = .true.       ! do not bother to break 
-
-!         write(*,20) 'subroutin',nlengths,sum(fixfraclengths(1:nlengths)),fracbreak
-!20       format(1X,A9,2x,I5,2x,F12.1,5x,F8.3)
+        end subroutine get_fraclengths
 
 
-     if (.NOT. e_stop ) then
-
-        frachistogram(:)=c0
-        ! convert from diameter to radii
-        fixfraclengths(:)=fixfraclengths(:)/c2
-        
-        ! bin into FS cats
-        ! highest cat cannot be fractured into
-        do j=1,nlengths
-           do k=1,nfsd-1
-              if ((fixfraclengths(j).ge.floe_rad_l(k)).and.(fixfraclengths(j).lt.floe_rad_l(k+1))) then
-                 frachistogram(k)=frachistogram(k)+1
-              end if
-           end do
-!         if (fixfraclengths(j).lt.(floe_rad_l(1)-puny)) stop 'fractures too small'
-        end do
-           
-            !if (my_task.eq.32) print *, 'got fraclengths'
-
-        frac_local(:)=floe_rad_c(:)*frachistogram(:)
-
-        ! normalize to one (not D/2, as it is not needed when leaving off twice
-        normalizer = SUM(frac_local) !*c2/D       ! Roach et al 2018 Eq 21
-        if (normalizer.ne.c0) frac_local(:) = frac_local(:) / normalizer
-     else
-        frac_local(:)=c0
-     end if
 
 
-!         write(*,30) 'wave_frac',fracbreak,frac_local
-!30       format(1X,A9,2x,F8.3,5x,12(F8.3,2x))
-
-     end subroutine wave_frac
  
 !=======================================================================
      

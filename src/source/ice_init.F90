@@ -22,9 +22,8 @@
       implicit none
 
       character(len=char_len_long) :: &
-! LR set to 'none'
-         ice_ic='none'  ! method of ice cover initialization
-! LR                    ! 'default'  => latitude and sst dependent
+         ice_ic  ! method of ice cover initialization
+                        ! 'default'  => latitude and sst dependent
                         ! 'none'     => no ice
                         ! note:  restart = .true. overwrites
 
@@ -105,12 +104,9 @@
       use shr_file_mod, only: shr_file_setIO
 #endif
 ! CMB LR
-      use ice_fsd, only: restart_fsd, write_diag_diff, write_diag_wave, &
-                         c_mrg, rdc_frzmlt
-      use ice_fsd_thermo, only: new_ice_fs
+      use ice_fsd, only: restart_fsd, c_mrg, new_ice_fs
       use ice_domain_size, only: nfsd
       use ice_state, only: tr_fsd, nt_fsd
-      use ice_therm_shared, only: hfrazilmin
 ! CMB LR
  
       ! local variables
@@ -149,12 +145,10 @@
         kcatbound,      gridcpl_file
 
       namelist /thermo_nml/ &
-        kitd,           ktherm,                                         &
+        kitd,           ktherm,          conduct,                       &
 ! LR
-        c_mrg,          new_ice_fs,       rdc_frzmlt,                   &
-        hfrazilmin,                                                     &
+        c_mrg,          new_ice_fs,                                     &
 ! LR
-        conduct,                                                        &
         a_rapid_mode,   Rac_rapid_mode,  aspect_rapid_mode,             &
         dSdt_slow_mode, phi_c_slow_mode, phi_i_mushy
 
@@ -185,7 +179,6 @@
         restore_ice,    formdrag,        highfreq,      natmiter,       &
         tfrz_option, &
 ! LR
-        wave_forc_dir,  wave_forc_file,  wave_fn_dir,  calc_wave,       &
         wave_spec,      wave_spec_dir,   wave_spec_file                 
 ! LR
 
@@ -271,12 +264,6 @@
 ! LR
       c_mrg = 0.01          ! constant of proportionality for floe merging
       new_ice_fs = 0        ! option for floe size assigned to new ice growth
-      rdc_frzmlt=.false.     ! partitioning of frzmlt (limit for melt)
-      hfrazilmin=0.05_dbl_kind ! min thickness of new frazil ice (m)
-      write_diag_diff=.false. ! if .true., calculate differences in mFSTD, FSD and
-                              ! a_n and save to history file
-      write_diag_wave=.false. ! if .true., save lats/lons from find_wave to 
-                              ! history file 
 ! LR
       conduct = 'bubbly'     ! 'MU71' or 'bubbly' (Pringle et al 2007)
       calc_Tsfc = .true.     ! calculate surface temperature
@@ -331,12 +318,8 @@
       restore_ice     = .false.   ! restore ice state on grid edges if true
       dbug      = .false.         ! true writes diagnostics for input forcing
 ! LR
-      wave_forc_dir = ' ' 
-      wave_forc_file = ' '        ! eORCA1_ww3g_6h_jra55-wave_1979.nc OR gx3
       wave_spec_dir = ' '
       wave_spec_file = ' '
-      wave_fn_dir   = ' '
-      calc_wave     = .false.     ! create lookup table for wave fracture 
       wave_spec     = .false.     ! wave spectrum in ice is available for each gridcell
 ! LR
       latpnt(1) =  90._dbl_kind   ! latitude of diagnostic point 1 (deg)
@@ -796,10 +779,6 @@
 ! LR
       call broadcast_scalar(c_mrg,              master_task)      
       call broadcast_scalar(new_ice_fs,         master_task)
-      call broadcast_scalar(rdc_frzmlt,         master_task)
-      call broadcast_scalar(hfrazilmin,         master_task)
-      call broadcast_scalar(write_diag_diff,    master_task)
-      call broadcast_scalar(write_diag_wave,    master_task)
 ! LR
       call broadcast_scalar(conduct,            master_task)
       call broadcast_scalar(R_ice,              master_task)
@@ -849,12 +828,8 @@
       call broadcast_scalar(restore_ice,        master_task)
       call broadcast_scalar(dbug,               master_task)
 ! LR
-      call broadcast_scalar(wave_forc_dir,      master_task)
-      call broadcast_scalar(wave_forc_file,     master_task) 
       call broadcast_scalar(wave_spec_dir,     master_task)
       call broadcast_scalar(wave_spec_file,     master_task)
-      call broadcast_scalar(wave_fn_dir,        master_task)
-      call broadcast_scalar(calc_wave,          master_task)
       call broadcast_scalar(wave_spec,          master_task)
 ! LR
       call broadcast_array (latpnt(1:2),        master_task)
@@ -1045,10 +1020,6 @@
 ! LR        
          write(nu_diag,1005) ' c_mrg                       = ', c_mrg
          write(nu_diag,1020) ' new_ice_fs                  = ', new_ice_fs
-         write(nu_diag,1010) ' rdc_frzmlt                  = ', rdc_frzmlt
-         write(nu_diag,1005) ' hfrazilmin                  = ', hfrazilmin
-         write(nu_diag,1020) ' write_diag_diff             = ', write_diag_diff
-         write(nu_diag,1020) ' write_diag_wave             = ', write_diag_wave
 ! LR         
          write(nu_diag,1030) ' atmbndy                   = ', &
                                trim(atmbndy)

@@ -230,6 +230,7 @@
 ! other 2D flux and energy variables
 
       real (kind=dbl_kind), dimension (icells) :: &
+         fcondbot    , & ! downward cond flux at bottom surface (W m-2)
          einit       , & ! initial energy of melting (J m-2)
          efinal      , & ! final energy of melting (J m-2)
          einter          ! intermediate energy
@@ -622,6 +623,11 @@
 ! authors C. M. Bitz, UW
 !         William H. Lipscomb, LANL
 !         Elizabeth C. Hunke, LANL
+!         
+! 2016: Lettie Roach modified slightly to allow fside and fbot to be 
+!       diagnostic output
+! 2019: Lettie Roach: only calculate lateral heat flux (fside) if we
+!       have a floe size distribution
 
       subroutine frzmlt_bottom_lateral (nx_block, ny_block, &
                                         ilo, ihi, jlo, jhi, &
@@ -632,10 +638,11 @@
                                         sst,      Tf,       &
                                         strocnxT, strocnyT, &
                                         Tbot,     fbot,     &
-! LR
-                                        fside,              &
-! LR
-                                        rside,    Cdn_ocn)
+                                        fside,    rside,    &
+                                        Cdn_ocn    )
+
+       use ice_state, only: nt_fsd, tr_fsd
+       use ice_fsd, only: floe_rad_c
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
@@ -667,10 +674,8 @@
          intent(out) :: &
          Tbot    , & ! ice bottom surface temperature (deg C)
          fbot    , & ! heat flux to ice bottom  (W/m^2)
-! LR
-         fside   , & ! heat flux to ice side  (W/m^2)
-! LR
-         rside       ! fraction of ice that melts laterally
+         rside   , & ! fraction of ice that melts laterally
+         fside       ! lateral heat flux (W/m^2) !LR
 
       ! local variables
 
@@ -685,13 +690,16 @@
          indxi, indxj     ! compressed indices for cells with ice melting
 
       real (kind=dbl_kind), dimension (:), allocatable :: &
-         etot     ! total energy in column
+         etot, &        ! total energy in column
+         qavg           ! average enthalpy
 
       real (kind=dbl_kind) :: &
          deltaT    , & ! SST - Tbot >= 0
          ustar     , & ! skin friction velocity for fbot (m/s)
-         wlat      , & ! lateral melt rate (m/s)
          xtmp          ! temporary variable
+
+     real (kind=dbl_kind), dimension(nx_block,ny_block) :: &
+         wlat        ! lateral melt rate (m/s)
 
       ! Parameters for bottom melting
 
@@ -710,12 +718,11 @@
 
       do j = 1, ny_block
       do i = 1, nx_block
+         fside(i,j) = c0
+         wlat(i,j) = c0
          rside(i,j) = c0
          Tbot (i,j) = Tf(i,j)
          fbot (i,j) = c0
-! LR
-         fside (i,j) = c0
-! LR
       enddo
       enddo
 
@@ -735,6 +742,8 @@
       enddo                     ! j
 
       allocate(etot (imelt))
+      allocate(qavg (imelt))
+
 
       do ij = 1, imelt  ! cells where ice can melt
          i = indxi(ij)
@@ -773,20 +782,28 @@
       !    Steele (1992): JGR, 97, 17,729-17,738
       !-----------------------------------------------------------------
 
-         wlat = m1 * deltaT**m2 ! Maykut & Perovich
-         rside(i,j) = wlat*dt*pi/(floeshape*floediam) ! Steele
+        wlat(i,j) = m1 * deltaT**m2 ! Maykut & Perovich
+
+
+        if (.NOT.tr_fsd) then ! assuming all floes are 300 m, compute rside
+            
+            rside(i,j) = wlat(i,j)*dt*pi/(floeshape*floediam) ! Steele
          rside(i,j) = max(c0,min(rside(i,j),c1))
+
+        end if ! tr_fsd
 
       enddo                     ! ij
 
       !-----------------------------------------------------------------
-      ! Compute heat flux associated with this value of rside.
+      ! Compute heat flux associated with this value of rside (no FSD)
+      ! or wlat (with FSD)
       !-----------------------------------------------------------------
 
       do n = 1, ncat
 
          do ij = 1, imelt
             etot(ij) = c0
+            qavg(ij) = c0
          enddo
 
          ! melting energy/unit area in each column, etot < 0
@@ -800,6 +817,9 @@
                j = indxj(ij)
                etot(ij) = etot(ij) + trcrn(i,j,nt_qsno+k-1,n) &
                                    * vsnon(i,j,n)/real(nslyr,kind=dbl_kind)
+               qavg(ij) = qavg(ij) + trcrn(i,j,nt_qsno+k-1,n)
+
+
             enddo               ! ij
          enddo
 
@@ -812,6 +832,7 @@
                j = indxj(ij)
                etot(ij) = etot(ij) + trcrn(i,j,nt_qice+k-1,n) &
                                    * vicen(i,j,n)/real(nilyr,kind=dbl_kind)
+               qavg(ij) = qavg(ij) +  trcrn(i,j,nt_qice+k-1,n)
             enddo               ! ij
          enddo                  ! nilyr
 
@@ -822,7 +843,14 @@
             i = indxi(ij)
             j = indxj(ij)
             ! lateral heat flux
+            if (tr_fsd) then
+                ! directly from lateral melt rate
+                ! NB this uses enthalphy averaged for all thickness categories
+                fside(i,j) = fside(i,j) + wlat(i,j)*qavg(ij)
+            else
+                ! use rside to calculate lateral heat flux
             fside(i,j) = fside(i,j) + rside(i,j)*etot(ij)/dt ! fside < 0
+            end if
          enddo                  ! ij
 
       enddo                     ! n

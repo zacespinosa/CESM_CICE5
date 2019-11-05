@@ -46,7 +46,7 @@ contains
     use ice_flux        , only: init_flux_atm, init_flux_ocn
     use ice_state       , only: tr_aero
     use ice_timers      , only: ice_timer_start, ice_timer_stop
-    use ice_timers      , only: timer_couple, timer_step
+    use ice_timers      , only: timer_couple, timer_step, timer_waves
     use ice_zbgc_shared , only: skl_bgc
 
     character(len=*), intent(in), optional :: restart_filename
@@ -111,17 +111,20 @@ contains
     use ice_state          , only: nt_qsno, trcrn, tr_iage, tr_FY, tr_lvl
     use ice_state          , only: nt_qsno, trcrn, tr_iage, tr_FY, tr_lvl
     use ice_state          , only: tr_pond_cesm, tr_pond_lvl, tr_pond_topo, tr_brine, tr_aero
+    use ice_state          , only: tr_fsd !LR
     use ice_step_mod       , only: prep_radiation, step_therm1, step_therm2
     use ice_step_mod       , only: post_thermo, step_dynamics, step_radiation
     use ice_therm_shared   , only: calc_Tsfc
     use ice_timers         , only: ice_timer_start, ice_timer_stop
     use ice_timers         , only: timer_diags, timer_column, timer_thermo, timer_bound
     use ice_timers         , only: timer_hist, timer_readwrite
+    use ice_timers         , only: timer_waves !LR
     use ice_algae          , only: bgc_diags, write_restart_bgc
     use ice_zbgc           , only: init_history_bgc, biogeochemistry
     use ice_zbgc_shared    , only: skl_bgc
     use ice_communicate    , only: MPI_COMM_ICE
     use ice_prescribed_mod
+    use ice_wavefracspec   , only: wave_spec, icepack_wavefracfsd !LR
 
     character(len=*), intent(in), optional :: restart_filename
 
@@ -185,6 +188,17 @@ contains
     ! dynamics, transport, ridging
     !-----------------------------------------------------------------
 
+! LR
+!HK TODO does this need to go inside if (.not.prescribed_ice ...?
+        ! Modify the floe size distribution according to ocean surface wave
+        ! fracture 
+        call ice_timer_start(timer_waves)
+
+        if (tr_fsd.and.wave_spec) call icepack_wavefracfsd
+
+        call ice_timer_stop(timer_waves)    
+! LR
+
     if (.not.prescribed_ice .and. kdyn>0) then
        do k = 1, ndtd
           call step_dynamics (dt_dyn, ndtd)
@@ -245,6 +259,7 @@ contains
        end if
        if (tr_iage)      call write_restart_age
        if (tr_FY)        call write_restart_FY
+       if (tr_fsd)       call write_restart_fsd !LR
        if (tr_lvl)       call write_restart_lvl
        if (tr_pond_cesm) call write_restart_pond_cesm
        if (tr_pond_lvl)  call write_restart_pond_lvl

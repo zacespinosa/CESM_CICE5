@@ -35,9 +35,11 @@
         nblyr     = NBGCLYR   , & ! number of bio/brine layers per category
         max_nbtrcr=   9       , & ! maximum number of biology tracers
 !        nltrcr    = max_nbtrcr*TRBRI, & ! maximum layer bgc tracers (for zbgc)
-!liuxy
-        nfsd    = 24      , & !number of floe size categories, LR hardwired for NEMO-CICE
-!liuxy
+! LR
+        nfsd    = NFSDCAT      , & ! number of floe size categories
+        nfreq   = 25           , & ! number of frequencies for wave spectrum
+                                   ! hardcoded for WWIII
+! LR
 
         max_ntrcr =   1         & ! 1 = surface temperature              
                   + nilyr       & ! ice salinity

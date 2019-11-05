@@ -93,6 +93,9 @@
       call init_coupler_flux            ! initialize fluxes exchanged with coupler
       call init_thermo_vertical         ! initialize vertical thermodynamics
       call init_itd                     ! initialize ice thickness distribution
+! LR CMB
+        if (tr_fsd) call init_fsd_bounds      ! initialize floe size distribution bounds CMB
+! LR CMB
       call calendar(time)               ! determine the initial date
 
       call init_forcing_ocn(dt)         ! initialize sss and sst from data
@@ -160,7 +163,10 @@
       use ice_state                  ! almost everything
       use ice_zbgc           , only: init_bgc
       use ice_zbgc_shared    , only: skl_bgc
-
+! CMB
+      use ice_domain_size, only: nfsd   ! CMB
+      use ice_fsd, only: init_fsd, restart_fsd, read_restart_fsd  ! CMB
+! CMB
       integer(kind=int_kind) :: iblk, ltmp
 
       if (trim(runtype) == 'continue') then 
@@ -203,6 +209,19 @@
             enddo ! iblk
          endif
       endif
+! CMB
+      ! floe size distribution tracer
+      if (tr_fsd) then
+         if (trim(runtype) == 'continue') restart_fsd = .true.
+         if (restart_fsd) then
+            call read_restart_fsd
+         else
+            do iblk = 1, nblocks
+               call init_fsd(ice_ic, nx_block, ny_block, iblk, ncat, nfsd, trcrn(:,:,:,:,iblk))
+            enddo ! iblk
+         endif
+      endif
+! CMB
       ! level ice tracer
       if (tr_lvl) then
          if (trim(runtype) == 'continue') restart_lvl = .true.
