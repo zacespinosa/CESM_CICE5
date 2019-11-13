@@ -18,6 +18,7 @@ setenv RES gx3 ; setenv GRID 100x116
 
 set NXGLOB = `echo $GRID | sed s/x.\*//`
 set NYGLOB = `echo $GRID | sed s/.\*x//`
+setenv NFSDCAT 12         # number of floe size categories LR
 
 # Recommendations:
 #   NTASK equals nprocs in ice_in 

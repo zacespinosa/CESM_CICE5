@@ -69,8 +69,7 @@
           sss_data_type,   sst_data_type, ocn_data_dir, &
           oceanmixed_file, restore_sst,   trestore, &
 ! LR
-          wave_forc_dir, wave_forc_file, wave_spec_dir, wave_spec_file
-      use ice_wavebreaking, only: wave_fn_dir, calc_wave
+         wave_spec_dir, wave_spec_file
       use ice_wavefracspec, only: wave_spec
 ! LR
       use ice_grid, only: grid_file, gridcpl_file, kmt_file, grid_type, grid_format
@@ -137,8 +136,8 @@
         print_global,   print_points,   latpnt,          lonpnt,        &
         dbug,           histfreq,       histfreq_n,      hist_avg,      &
         history_dir,    history_file,                                   &
-        write_ic,       incond_dir,     incond_file,     write_diag_diff,&
-        write_diag_wave,  history_precision                
+        write_ic,       incond_dir,     incond_file,                    &
+        history_precision                
 
       namelist /grid_nml/ &
         grid_format,    grid_type,       grid_file,     kmt_file,       &

@@ -56,12 +56,13 @@
       use ice_kinds_mod
       use ice_restoring        , only: ice_HaloRestore_init
       use ice_shortwave        , only: init_shortwave
-      use ice_state            , only: tr_aero
+      use ice_state            , only: tr_aero, tr_fsd
       use ice_therm_vertical   , only: init_thermo_vertical
       use ice_timers           , only: timer_total, init_ice_timers, ice_timer_start, ice_timer_stop
       use ice_transport_driver , only: init_transport
       use ice_zbgc             , only: init_zbgc
       use ice_zbgc_shared      , only: skl_bgc
+      use ice_fsd              , only: init_fsd_bounds
 
       ! !INPUT/OUTPUT PARAMETERS:
       integer (kind=int_kind), optional, intent(in) :: mpicom_ice ! communicator for sequential ccsm

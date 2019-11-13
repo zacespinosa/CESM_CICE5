@@ -121,7 +121,12 @@
       character(char_len_long), public :: & 
          atm_data_dir , & ! top directory for atmospheric data
          ocn_data_dir , & ! top directory for ocean data
-         oceanmixed_file  ! file name for ocean forcing data
+         oceanmixed_file, &  ! file name for ocean forcing data
+! LR
+!HK not used in cesm
+         wave_spec_dir, & ! dir name for wave spectrum
+         wave_spec_file   ! file name for wave spectrum
+! LR
 
       integer (kind=int_kind), parameter :: & 
          nfld = 8   ! number of fields to search for in forcing file
@@ -184,6 +189,7 @@
 
 
 !HK TODO check cesm for dfreq
+print*, 'HK DEBUG calling get_wave_spec'
 
     ! LR all set for freq 25 
 

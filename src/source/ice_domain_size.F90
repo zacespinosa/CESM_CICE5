@@ -36,7 +36,7 @@
         max_nbtrcr=   9       , & ! maximum number of biology tracers
 !        nltrcr    = max_nbtrcr*TRBRI, & ! maximum layer bgc tracers (for zbgc)
 ! LR
-        nfsd    = NFSDCAT      , & ! number of floe size categories
+        nfsd    = 12, &!HK TODO needs NFSDCAT      , & ! number of floe size categories
         nfreq   = 25           , & ! number of frequencies for wave spectrum
                                    ! hardcoded for WWIII
 ! LR

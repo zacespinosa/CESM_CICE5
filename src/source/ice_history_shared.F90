@@ -218,6 +218,7 @@
       character (len=max_nstrm), public :: &
 !          f_example   = 'md', &
 ! LR 
+           f_wave_hs_ice     = 'm',                          &
            f_fbottom         = 'm', f_flateral        = 'm', &
            f_vlateral        = 'm', f_gradial         = 'm', & 
            f_leadarea        = 'm', f_latsurfarea     = 'm', &
@@ -570,13 +571,7 @@
            n_concforww          , n_diamforww           , &
            n_thickforww                                 , &
            n_wavespectrum,                                &
-           n_wave_hs            , n_wave_tz             , &
-           n_nearest_wave_hs                            , &
-           n_nearest_wave_tz                            , &
-           n_wave_search_i      , n_wave_search_j       , &
-           n_ice_search_i       , n_ice_search_j        , &
-           n_cml_nfloes         , n_nfloes              , &
-           n_hm,                                          &
+           n_wave_hs_ice        , n_hm                  , &
            n_areal_fsd          , n_areal_fstd          , & 
            n_areal_mfstd_tilda  , &
            n_dafsdani           , n_dafsdlatm           , &

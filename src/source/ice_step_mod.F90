@@ -351,7 +351,7 @@
       ! LR: various options for fsd thermodynamics
       !-----------------------------------------------------------------
 ! LR                      
-        if (tr_fsd) &
+        if (tr_fsd) then
               ! renormalize areal mFSTD (should already be normalized by
               ! time evolution equations, but other changes eg. transport
               ! may result in it being not quite normalized) 
@@ -1060,6 +1060,10 @@
                            sss       (:,:,  iblk),          &
                            salinz    (:,:,:,iblk),          &
                            phi_init, dSin0_frazil,          &
+                           fiso_ocn,              &    
+                           HDO_ocn,             &    
+                           H2_16O_ocn,          &    
+                           H2_18O_ocn,          &    
                            nbtrcr,                          &
                            flux_bio  (:,:,1:nbtrcr,iblk),   &
                            ocean_bio (:,:,1:nbtrcr,iblk),   &
@@ -1439,6 +1443,8 @@
           trcr_depend, aice, tr_aero, tr_iso, tr_pond_topo, nbtrcr
       use ice_therm_shared, only: heat_capacity
       use ice_zbgc_shared, only: flux_bio, first_ice
+      use ice_state, only: ntrcr, aicen, trcrn, vicen, vsnon, aice0, &
+          trcr_depend, aice, tr_aero, tr_iso, tr_pond_topo, nbtrcr
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step

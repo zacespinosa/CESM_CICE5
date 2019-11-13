@@ -1893,6 +1893,7 @@
       use ice_fsd
       use ice_grid, only: hm
       use ice_domain_size, only: nfsd    !CMB
+      use ice_constants, only: c2
 ! LR CMB
 
       real (kind=dbl_kind), intent(in) :: &
@@ -4302,14 +4303,7 @@
                  if (n_yieldstress11 (ns) /= 0) a2D(i,j,n_yieldstress11(ns),iblk) = spval_dbl
                  if (n_yieldstress12 (ns) /= 0) a2D(i,j,n_yieldstress12(ns),iblk) = spval_dbl
                  if (n_yieldstress22 (ns) /= 0) a2D(i,j,n_yieldstress22(ns),iblk) = spval_dbl ! LR
-                 if (n_wave_hs (ns) /=0 ) a2D(i,j,n_wave_hs(ns), iblk) = spval_dbl
-                 if (n_wave_tz (ns) /=0 ) a2D(i,j,n_wave_tz(ns), iblk) = spval_dbl
-                 if (n_nearest_wave_hs (ns) /=0 ) a2D(i,j,n_nearest_wave_hs(ns), iblk) = spval_dbl
-                 if (n_nearest_wave_tz (ns) /=0 ) a2D(i,j,n_nearest_wave_tz(ns), iblk) = spval_dbl
-                 if (n_wave_search_i (ns) /=0 ) a2D(i,j,n_wave_search_i(ns), iblk) = spval_dbl
-                 if (n_wave_search_j (ns) /=0 ) a2D(i,j,n_wave_search_j(ns), iblk) = spval_dbl
-                 if (n_ice_search_i (ns) /=0 ) a2D(i,j,n_ice_search_i(ns), iblk) = spval_dbl
-                 if (n_wave_search_j (ns) /=0 ) a2D(i,j,n_wave_search_j(ns), iblk) = spval_dbl
+                 if (n_wave_hs_ice (ns) /=0 ) a2D(i,j,n_wave_hs_ice(ns), iblk) = spval_dbl
                  if (n_wavespectrum (ns) /= 0) a2D(i,j,n_wavespectrum(ns), iblk) = spval_dbl
             else        
                  if (n_divu     (ns) /= 0) a2D(i,j,n_divu(ns),iblk)      = &

@@ -125,6 +125,7 @@ contains
     use ice_communicate    , only: MPI_COMM_ICE
     use ice_prescribed_mod
     use ice_wavefracspec   , only: wave_spec, icepack_wavefracfsd !LR
+    use ice_fsd            , only: write_restart_fsd !LR
 
     character(len=*), intent(in), optional :: restart_filename
 

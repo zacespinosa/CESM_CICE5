@@ -1536,7 +1536,8 @@
       use ice_state, only: nt_Tsfc, nt_iage, nt_FY, nt_alvl, nt_vlvl, nt_aero, &
                            nt_sice, nt_qice, nt_fsd, &
                            nt_apnd, tr_pond_cesm, tr_pond_lvl, tr_pond_topo, &
-                           tr_iage, tr_FY, tr_lvl, tr_aero, tr_brine, tr_fsd
+                           tr_iage, tr_FY, tr_lvl, tr_aero, tr_brine, tr_fsd, &
+                           tr_iso, nt_iso
       use ice_therm_mushy, only: liquidus_temperature_mush, enthalpy_mush
       use ice_therm_shared, only: ktherm, hfrazilmin
       use ice_zbgc, only: add_new_ice_bgc
@@ -1708,6 +1709,9 @@
 
       real (kind=dbl_kind), dimension (icells) :: &
          vi0_init         ! volume of new ice
+
+      real (kind=dbl_kind) :: frazil_conc
+
  ! LR       
       real (kind=dbl_kind), dimension (nx_block,ny_block,ncat) :: &
          area2, d_an_tot  ! change in the ITD due to lateral growth and new ice
