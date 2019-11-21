@@ -809,6 +809,18 @@
   <!-- Tracer info -->
   <!-- =========================== -->
 
+  <entry id="tr_fsd">
+    <type>logical</type>
+    <category>tracers</category>
+    <group>tracer_nml</group>
+    <desc>
+      fsd flow size distribution
+    </desc>
+    <values>
+      <value>.true.</value>
+    </values>
+  </entry>
+
   <entry id="tr_iage">
     <type>logical</type>
     <category>tracers</category>
@@ -1590,6 +1602,18 @@
   <!-- =========================== -->
   <!-- forcing_nml -->
   <!-- =========================== -->
+
+  <entry id="wave_spec">
+    <type>logical</type>
+    <category>forcing</category>
+    <group>forcing_nml</group>
+    <desc>
+     wave spectrum in ice is available for each gridcell
+    </desc>
+    <values>
+      <value>.true.</value>
+    </values>
+  </entry>
 
 <!--  <entry id="atmbndy">
     <type>char</type>

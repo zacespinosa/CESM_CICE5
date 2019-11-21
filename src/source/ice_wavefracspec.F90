@@ -390,7 +390,6 @@
         end if ! not all frac zero
     end if ! aice>p01
         
-
      end subroutine wave_frac_fsd
 
 
@@ -413,6 +412,7 @@
      use ice_fsd, only: floe_rad_l, floe_rad_c
      use ice_domain_size, only: nfsd
      use ice_flux, only: freq
+     use ice_exit, only: abort_ice
  
      real (kind=dbl_kind),  intent(in) :: &
          hbar   ! mean ice thickness
@@ -475,7 +475,10 @@
  
      ! spectral coefficients
      spec_coeff = sqrt(c2*spec_elambda*dlambda)
-     if (ANY(ISNAN(spec_coeff))) stop 'NaN spec_coeff' 
+     if (ANY(ISNAN(spec_coeff))) then 
+        print*, 'NaN spec_coeff'
+        call abort_ice('NaN spec_coeff') 
+     endif
 
      ! initialize fracture lengths
      fraclengths(:)=c0

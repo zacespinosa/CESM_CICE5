@@ -48,6 +48,7 @@
       use ice_flux             , only: init_history_dyn, init_flux_atm, init_flux_ocn
       use ice_forcing          , only: init_forcing_ocn, init_forcing_atmo
       use ice_forcing          , only: get_forcing_atmo, get_forcing_ocn
+      use ice_forcing          , only: init_forcing_wave
       use ice_grid             , only: init_grid1, init_grid2
       use ice_history          , only: init_hist, accum_hist
       use ice_restart_shared   , only: restart, runid, runtype
@@ -122,7 +123,11 @@
       ! coupler communication or forcing data initialization
       !--------------------------------------------------------------------
 
+
+print*, 'HK calling init_forcing_atmo'
+
       call init_forcing_atmo    ! initialize atmospheric forcing (standalone)
+      call init_forcing_wave    ! initialize dfreq, freq for www coupling
 
       if (runtype == 'initial' .and. .not. restart) then
          call init_shortwave    ! initialize radiative transfer using current swdn

@@ -37,7 +37,7 @@
                 read_clim_data, read_clim_data_nc, &
                 interpolate_data, interp_coeff_monthly, &
 ! LR
-                get_wave_spec
+                get_wave_spec, init_forcing_wave
 ! LR
       save
 
@@ -236,6 +236,28 @@ print*, 'HK DEBUG calling get_wave_spec'
 #endif
          end subroutine get_wave_spec
 
+
+!=======================================================================
+ 
+    subroutine init_forcing_wave
+
+    use ice_flux, only: dfreq, freq
+    use ice_constants
+
+    ! NB hardwired for wave coupling with our version of Wavewatch
+    ! from Wavewatch, set as f(n+1) = C*f(n) where C is a constant set by the
+    ! user, typically ~ 1.1.
+    ! these freq are for C = 1.1
+    freq = (/0.04118,     0.045298,    0.0498278,   0.05481058,  0.06029164, 0.06632081, &
+             0.07295289,  0.08024818,  0.08827299,  0.09710029,  0.10681032, 0.11749136, &
+             0.1292405,   0.14216454,  0.15638101,  0.17201911,  0.18922101, 0.20814312, &
+             0.22895744,  0.25185317,  0.27703848,  0.30474234,  0.33521661, 0.36873826, &
+             0.40561208/)
+
+    ! boundaries of bin n are at f(n)*sqrt(1/C) and f(n)*sqrt(C) 
+    dfreq(:) = freq(:)*(SQRT(1.1_dbl_kind) - SQRT(c1/1.1_dbl_kind))
+
+    end subroutine init_forcing_wave
 
 !=======================================================================
 

@@ -195,6 +195,8 @@ contains
         ! fracture 
         call ice_timer_start(timer_waves)
 
+
+print*, 'HK tr_fsd, wave_spec', tr_fsd, wave_spec
         if (tr_fsd.and.wave_spec) call icepack_wavefracfsd
 
         call ice_timer_stop(timer_waves)    
