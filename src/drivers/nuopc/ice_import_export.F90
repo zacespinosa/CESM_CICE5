@@ -370,6 +370,8 @@ print*, "HK CICE present(mesh)"
     real (kind=dbl_kind)             :: MIN_RAIN_TEMP, MAX_SNOW_TEMP
     character(len=2)                 :: fvalue
     character(len=*),   parameter    :: subname = 'ice_import'
+
+integer :: nx, ny !HK debugging
     !-----------------------------------------------------
 
     ! Note that the precipitation fluxes received from the mediator
@@ -481,17 +483,32 @@ print*, "HK CICE present(mesh)"
     !   ice_flux module: wave_spectrum = wave_elevation_spectrum
     deallocate(aflds)
     allocate(aflds(nx_block,ny_block,25,nblocks))
+    aflds = c0
     !HK TODO what to set this to: aflds = c0
 
     do k = 1,25
+
+!HK why is this negative? I think this is the fillvalue -99999
       write(fvalue, '(I2)') k 
       call state_getimport(importState, 'wave_elevation_spectrum'//trim(adjustl(fvalue)), output=aflds, index=k, rc=rc)
       if (ChkErr(rc,__LINE__,u_FILE_u)) return
       !HK TODO check indicies are in correct order
       do iblk = 1, nblocks
          wave_spectrum(:,:,k,iblk)  = aflds(:,:,k,iblk)
+         !HK check for negative numbers in wave spectrum
+         if (any(wave_spectrum(:,:,k,iblk) < 0)) then 
+do nx = 1, nx_block
+do ny = 1, ny_block
+if (wave_spectrum(nx,ny,k,iblk) < 0) then
+print*, 'after import',  nx, ny, k, wave_spectrum(nx,ny,k,iblk)
+endif
+enddo
+enddo
+           !call shr_sys_abort(trim(subname)//' wave_spectrum'//trim(adjustl(fvalue))//'negative')
+         endif
       enddo   
     end do
+
 
     deallocate(aflds)
     allocate(aflds(nx_block,ny_block,nfldv,nblocks))

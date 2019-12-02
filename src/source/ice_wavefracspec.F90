@@ -179,7 +179,7 @@
             d_afsd_wave(i,j,:,iblk) = c0
             ! LR this condition is FOR TESTING ONLY when using dummy wave spectrum
             ! do not use for actual runs!!
-            if (aice(i,j,iblk).lt.0.8_dbl_kind) &
+            !if (aice(i,j,iblk).lt.0.8_dbl_kind) &
 
             call wave_frac_fsd(aice(i,j,iblk),  vice(i,j,iblk),        & ! in 
                                aicen(i,j,:,iblk),                      & ! in
