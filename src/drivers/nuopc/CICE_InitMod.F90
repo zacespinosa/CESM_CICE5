@@ -123,9 +123,6 @@
       ! coupler communication or forcing data initialization
       !--------------------------------------------------------------------
 
-
-print*, 'HK calling init_forcing_atmo'
-
       call init_forcing_atmo    ! initialize atmospheric forcing (standalone)
       call init_forcing_wave    ! initialize dfreq, freq for www coupling
 

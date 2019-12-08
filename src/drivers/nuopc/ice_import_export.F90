@@ -298,8 +298,6 @@ contains
 
        geomtype = ESMF_GEOMTYPE_MESH
 
-print*, "HK CICE present(mesh)"
-
        call fldlist_realize( &
             state=ExportState, &
             fldList=fldsFrIce, &
