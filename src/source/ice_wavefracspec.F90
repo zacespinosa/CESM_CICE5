@@ -36,7 +36,7 @@
  
       implicit none
       private
-      public :: wave_frac, icepack_wavefracfsd 
+      public :: wave_frac, icepack_wavefracfsd, get_subdt_fsd 
 
 
 
@@ -111,19 +111,21 @@
 
 !=======================================================================
 !
-!  Adaptive timestepping for wave fracture
+!  Adaptive timestepping for FSD, process-agnostic
 !  See reference: Horvat & Tziperman (2017) JGR, Appendix A
 !
 !  authors: 2018 Lettie Roach, NIWA/VUW
 !
 !
-     function get_subdt_wave(amfstd_init, d_amfstd) &
+     function get_subdt_fsd(ndim, amfstd_init, d_amfstd) &
                               result(subdt)
 
-      real (kind=dbl_kind), dimension (nfsd), intent(in) :: &
+      integer (kind=int_kind), intent(in) :: ndim
+
+      real (kind=dbl_kind), dimension (ndim), intent(in) :: &
          amfstd_init, d_amfstd
 
-      real (kind=dbl_kind), dimension (nfsd) :: &
+      real (kind=dbl_kind), dimension (ndim) :: &
          check_dt 
  
       integer (kind=int_kind) :: k
@@ -131,7 +133,7 @@
       real (kind=dbl_kind) :: subdt
 
       check_dt(:) = bignum 
-      do k = 1, nfsd
+      do k = 1, ndim
           if (d_amfstd(k).gt.puny) check_dt(k) = (c1-amfstd_init(k))/d_amfstd(k)
           if (d_amfstd(k).lt.-puny) check_dt(k) = amfstd_init(k)/ABS(d_amfstd(k))
       end do 
@@ -140,7 +142,7 @@
 
 
 
-      end function get_subdt_wave
+      end function get_subdt_fsd
 
 !=======================================================================
 ! Author: Lettie Roach, NIWA, 2019
@@ -330,7 +332,7 @@
 
  
                          ! timestep required for this
-                         subdt = get_subdt_wave(amfstd_tmp, d_amfstd_tmp)
+                         subdt = get_subdt_fsd(nfsd, amfstd_tmp, d_amfstd_tmp)
                          subdt = MIN(subdt, dt) ! cannot be greater than CICE timestep
 
                          ! update amfstd and elpased time
