@@ -1124,6 +1124,7 @@
       ! local variables
 
       integer (kind=int_kind) :: &
+         nsubt       , & ! fsd timestepping
          i, j        , & ! horizontal indices
          n           , & ! thickness category index
          k           , & ! layer index
@@ -1273,6 +1274,7 @@
                         'WARNING init mFSTD not normed, lm'
                         end if
                         areal_mfstd_init(i,j,:,n) = areal_mfstd_init(i,j,:,n)/SUM(areal_mfstd_init(i,j,:,n)) 
+
                         cat1_arealoss = - trcrn(i,j,nt_fsd+1-1,n) / floe_binwidth(1) * &
                                         dt * G_radial(i,j)*aicen(i,j,n)
 
@@ -1294,11 +1296,11 @@
                         if (rside_itd(i,j,n).lt.c0) stop 'rside lt0'
                         rside_itd(i,j,n) = MIN(c1,rside_itd(i,j,n))
        
-                     end if
+                    end if
 
                enddo ! n
 
-             end if ! G_r
+             end if ! G_do n = 1, ncat
 
          enddo !ij
     end if ! tr_fsd
@@ -1356,8 +1358,16 @@
                       elapsed_t = c0
                       afsd_tmp(:) = areal_mfstd_init(i,j,:,n)
                       d_afsd_tmp(:) = c0
+                      nsubt = 0
  
                       DO WHILE (elapsed_t.lt.dt)  
+			    nsubt = nsubt + 1
+			    if (nsubt.gt.100) then
+				 print *, 'latm not converging'
+				 print *, 'd_afsd_tmp ',d_afsd_tmp
+				 print *, 'afsd_tmp ',afsd_tmp
+			    end if
+
 
                         ! finite differences
                         fin_diff(:) = c0
@@ -1390,13 +1400,18 @@
                         afsd_tmp(:) = afsd_tmp(:) + subdt*d_afsd_tmp(:)
                         elapsed_t = elapsed_t + subdt
 
+
                       END DO
+                      
+                      if (ANY(afsd_tmp(:).lt.(-puny))) stop &
+                                'A neg mFSTD, lm'
+
 
                       ! this fixes tiny (e-30) differences from 1
                       afsd_tmp(:) = afsd_tmp(:)/SUM(afsd_tmp(:))
 
                       if (ANY(afsd_tmp(:).lt.(-puny))) stop &
-                                'neg mFSTD, lm'
+                                'B neg mFSTD, lm'
 
                       trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = afsd_tmp(:)
                    else
@@ -1698,6 +1713,7 @@
          Sprofile         ! salinity profile used for new ice additions
 
       integer (kind=int_kind) :: &
+         nsubt              , & ! fsd timestep counter
          jcells, kcells     , & ! grid cell counters
          ij, m                  ! combined i/j horizontal indices
 
@@ -1742,7 +1758,7 @@
          lead_area,    & ! the fractional area of the lead region
          latsurf_area, & ! the area covered by lateral surface of floes
          totfrac, &      ! for FSD normalization
-         amount_taken              
+         amount_taken, tmp              
 
       real (kind=dbl_kind), dimension (nfsd+1) :: &
          f_flx
@@ -2002,7 +2018,6 @@
                              'leadarewrong'
 
                 !-----Now distribute ice
-
                 amount_taken = SUM(d_an_latg(i,j,:))  
                 
             else ! tr_fsd
@@ -2266,14 +2281,22 @@
             ! adaptive subtimestep
             elapsed_t = c0
             afsd_tmp(:) = areal_mfstd_init(i,j,:,n)
+            if (ANY(afsd_tmp.lt.c0)) stop 'neg mfstd before loop latg'
             d_afsd_tmp(:) = c0
+            nsubt = 0
  
             DO WHILE (elapsed_t.lt.dt)  
+            nsubt = nsubt + 1
+            if (nsubt.gt.100) then
+                 print *, 'latg not converging'
+                 print *, 'd_afsd_tmp ',d_afsd_tmp
+                 print *, 'afsd_tmp ',afsd_tmp
+            end if
 
             ! finite differences
             fin_diff(:) = c0 ! NB could stay zero if all in largest FS cat
             f_flx(:) = c0
-            do k = 2, nfsd!+1
+            do k = 2, nfsd
                 f_flx(k) = G_radial(i,j) * afsd_tmp(k-1) / &
                                                     floe_binwidth(k-1)
             end do
@@ -2285,29 +2308,51 @@
                 'sum fnk diff not zero in lg'
 
             ! compute fsd tendency
+            tmp = SUM(afsd_tmp(:)/floe_rad_c(:))
             do k = 1,nfsd
                 d_afsd_tmp(k) =   - fin_diff(k) + &
                     c2 * G_radial(i,j) * afsd_tmp(k) * &
-                    (c1/floe_rad_c(k) - & 
-                    SUM(afsd_tmp(:)/floe_rad_c(:))) 
+                    (c1/floe_rad_c(k) - tmp) 
             end do
-                            
+
+            d_afsd_tmp(:) = c0
+           
+            if (ALL(ABS(d_afsd_tmp).lt.puny)) then
+                 d_afsd_tmp(:)  = c0
+                 EXIT
+            end if                 
+           
             ! timestep required for this
-            subdt = get_subdt_fsd(nfsd, afsd_tmp(:), d_afsd_tmp(:))
+            subdt = get_subdt_fsd(nfsd, afsd_tmp(:), d_afsd_tmp(:)) 
             subdt = MIN(subdt, dt)
-            !if (subdt.lt.dt) print *, 'subdt=',subdt
+ 
+            if (ANY((afsd_tmp(:) + subdt*d_afsd_tmp(:)).lt.c0)) then
+                 print *, i, j, n
+                 print *, 'afsd init',afsd_tmp
+                 print *, 'subdt ',subdt
+                 print *, 'd afsd ',d_afsd_tmp
+                 print *, 'dt*dafsd',subdt*d_afsd_tmp
+                 print *, 'afsd final ',afsd_tmp(:) + subdt*d_afsd_tmp(:)
+                 stop 
+                 print *, '----------'
+            end if
                         
             ! update fsd and elapsed time
             afsd_tmp(:) = afsd_tmp(:) + subdt*d_afsd_tmp(:)
+              
+
             elapsed_t = elapsed_t + subdt
 
             END DO
+
+            if (ANY(afsd_tmp(:).lt.(-puny))) stop &
+               'A neg mFSTD, lg'
 
             ! this fixes tiny (e-30) differences from 1
             afsd_tmp(:) = afsd_tmp(:)/SUM(afsd_tmp(:))
 
             if (ANY(afsd_tmp(:).lt.(-puny))) stop &
-               'neg mFSTD, lg'
+               'B neg mFSTD, lg'
 
             areal_mfstd_latg(i,j,:,n) = afsd_tmp(:)
 
