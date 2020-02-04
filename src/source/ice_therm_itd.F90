@@ -28,6 +28,7 @@
                                  max_aero, max_iso, n_aero, n_iso
       use ice_fileunits, only: nu_diag
       use ice_wavefracspec, only: get_subdt_fsd
+      use ice_fsd, only: icepack_cleanup_fsdn
 
       implicit none
 
@@ -1156,9 +1157,6 @@
       real (kind=dbl_kind), dimension (ncat) :: &
          delta_an        ! change in the ITD
 
-     real (kind=dbl_kind), dimension (nx_block,ny_block,nfsd,ncat) :: & 
-         areal_mfstd_init
-
       real (kind=dbl_kind), dimension (nx_block,ny_block) :: &
          qi0          , & ! frazil ice enthalpy
          Si0              ! frazil ice bulk salinity
@@ -1196,7 +1194,6 @@
 
      else ! calculate rside_itd using FSD
 
-         areal_mfstd_init = trcrn(:,:,nt_fsd:nt_fsd+nfsd-1,:)
          !-----------------------------------------------------------------
          ! Identify grid cells with lateral melt
          !-----------------------------------------------------------------
@@ -1264,17 +1261,9 @@
               !-----------------------------------------------------------------
               if (G_radial(i,j).lt.(c0-puny)) then
                 do n = 1, ncat
-
-                    if (aicen(i,j,n).gt.puny) then
-                        if (ABS(SUM(areal_mfstd_init(i,j,:,n))-c1).gt.1.0e-9_dbl_kind) then
-                                print *, ABS(SUM(areal_mfstd_init(i,j,:,n))-c1)
-                                print *, SUM(areal_mfstd_init(i,j,:,n))
-                                print *, SUM(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n))
-                                print *, &
-                        'WARNING init mFSTD not normed, lm'
-                        end if
-                        areal_mfstd_init(i,j,:,n) = areal_mfstd_init(i,j,:,n)/SUM(areal_mfstd_init(i,j,:,n)) 
-
+                   if (aicen(i,j,n).gt.puny) then 
+                        call icepack_cleanup_fsdn(nfsd, trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n))
+               
                         cat1_arealoss = - trcrn(i,j,nt_fsd+1-1,n) / floe_binwidth(1) * &
                                         dt * G_radial(i,j)*aicen(i,j,n)
 
@@ -1346,6 +1335,13 @@
                     vsnon(i,j,n) = vsnon(i,j,n) * (c1 - rside_itd(i,j,n))
 
  
+                    ! remove after debugging
+                    if (aicen(i,j,n).gt.c1+puny) stop 'an >1, lm'
+                    if (aicen(i,j,n).lt.-puny) stop 'an <0, lm'
+                    if (aicen(i,j,n).ne.aicen(i,j,n)) stop 'nan, lm'
+
+
+
                     !-----------------------------------------------------------------  
                     ! Now compute the change to the mFSTD
                     !-----------------------------------------------------------------                                            
@@ -1356,7 +1352,7 @@
 
                       ! adaptive subtimestep
                       elapsed_t = c0
-                      afsd_tmp(:) = areal_mfstd_init(i,j,:,n)
+                      afsd_tmp(:) = trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n)
                       d_afsd_tmp(:) = c0
                       nsubt = 0
  
@@ -1410,8 +1406,16 @@
                       ! this fixes tiny (e-30) differences from 1
                       afsd_tmp(:) = afsd_tmp(:)/SUM(afsd_tmp(:))
 
+                      call icepack_cleanup_fsdn(nfsd, afsd_tmp(:))
+
                       if (ANY(afsd_tmp(:).lt.(-puny))) stop &
                                 'B neg mFSTD, lm'
+                      if (ANY(afsd_tmp(:).gt.(c1+puny))) stop &
+                                '>1 mFSTD, lm'
+                      if (ANY(afsd_tmp(:).ne.afsd_tmp(:))) stop &
+                                'nan mFSTD, lm'
+
+
 
                       trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = afsd_tmp(:)
                    else
@@ -1975,16 +1979,8 @@
                     ! compute change to ITD      
                     do n=1,ncat
 
-                        if (aicen(i,j,n).gt.puny) then
-                            if (ABS(SUM(areal_mfstd_init(i,j,:,n))-c1).gt.1.0e-9_dbl_kind) then
-                                print *, SUM(areal_mfstd_init(i,j,:,n)), ABS(SUM(areal_mfstd_init(i,j,:,n))-c1)
-                                print *, 'WARNING init not normed, ani'
-                            end if
-                            
-                            ! in case of 10e-10 errors
-                            areal_mfstd_init(i,j,:,n) = areal_mfstd_init(i,j,:,n)/SUM(areal_mfstd_init(i,j,:,n))
-                        end if
-        
+                        call icepack_cleanup_fsdn(nfsd,areal_mfstd_init(i,j,:,n))
+                                
                         d_an_latg(i,j,n) = c0
                                             
                         do k=1,nfsd ! sum over k
@@ -2251,6 +2247,12 @@
          aice0(i,j)   = aice0(i,j)   - d_an_tot(i,j,n)
          vicen(i,j,n) = vicen(i,j,n) + vin0new(m,n)
 
+                    ! remove after debugging
+                    if (aicen(i,j,n).gt.c1+puny) stop 'an >1, lg'
+                    if (aicen(i,j,n).lt.-puny) stop 'an <0, lg'
+                    if (aicen(i,j,n).ne.aicen(i,j,n)) stop 'nan, lg'
+
+
          if (aicen(i,j,n).gt.c0) trcrn(i,j,nt_Tsfc,n) = &
             (trcrn(i,j,nt_Tsfc,n)*area1 + Tf(i,j)*d_an_tot(i,j,n))/aicen(i,j,n)
          trcrn(i,j,nt_Tsfc,n) = min (trcrn(i,j,nt_Tsfc,n), c0)
@@ -2348,11 +2350,16 @@
             if (ANY(afsd_tmp(:).lt.(-puny))) stop &
                'A neg mFSTD, lg'
 
-            ! this fixes tiny (e-30) differences from 1
-            afsd_tmp(:) = afsd_tmp(:)/SUM(afsd_tmp(:))
+            call icepack_cleanup_fsdn(nfsd, afsd_tmp(:))
 
             if (ANY(afsd_tmp(:).lt.(-puny))) stop &
                'B neg mFSTD, lg'
+            if (ANY(afsd_tmp(:).gt.(c1+puny))) stop &
+               'B >1 mFSTD, lg'
+            if (ANY(afsd_tmp(:).ne.afsd_tmp(:))) stop &
+               'B nan mFSTD, lg'
+
+
 
             areal_mfstd_latg(i,j,:,n) = afsd_tmp(:)
 

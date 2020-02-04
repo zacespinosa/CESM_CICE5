@@ -33,6 +33,7 @@
       use ice_flux, only: dfreq
       use ice_domain_size, only: nfsd, ncat, nfreq, &
                                  max_ntrcr, max_blocks
+      use ice_fsd, only: icepack_cleanup_fsdn  
  
       implicit none
       private
@@ -101,7 +102,7 @@
       if (gain(nfsd).gt.puny) stop 'largest cat cannot gain, waves'
       if (loss(1).gt.puny) stop 'smallest cat cannot lose, waves'
 
-       d_amfstd(:) = gain(:) - loss(:)
+      d_amfstd(:) = gain(:) - loss(:)
  
       if (ABS(SUM(d_amfstd(:))).gt.puny) stop 'area not cons, waves'
 
@@ -282,7 +283,7 @@
     if (ANY(trcrn(:,:).lt.c0)) stop 'neg b4-wb'
    
     ! temporary fix
-    if (ANY(wave_spectrum(:).gt.1.0e+20_dbl_kind)) wave_spectrum(:) = c0
+    if (ANY(wave_spectrum(:).gt.1.0e+10_dbl_kind)) wave_spectrum(:) = c0
 
     ! do not try to fracture for minimal ice concentration or zero wave spectrum
     if ((aice.gt.p01).and.(.NOT.(ALL(wave_spectrum(:).lt.puny)))) then
@@ -296,22 +297,19 @@
         call  wave_frac(hbar, wave_spectrum(:), fracture_hist)
 
         ! if fracture occurs
-        if (.not. ALL(fracture_hist.lt.puny)) then
+        if (MAXVAL(fracture_hist).gt.puny) then
 
             do n = 1, ncat
+               
+
+                call icepack_cleanup_fsdn(nfsd, trcrn(:,n))
 
                 if ((aicen(n).gt.puny).and.&
                     (SUM(trcrn(:,n)).gt.puny).and.&
-                    (.NOT.(trcrn(1,n).ge.c1))) then
+                    (trcrn(1,n).lt.c1-puny)) then
                            
                     ! for diagnostics
                     amfstd_init(:) = trcrn(:,n)
-
-                           
-                    ! protect against small numerical errors
-                    WHERE (amfstd_init.lt.puny) amfstd_init = c0
-                    amfstd_init = amfstd_init(:) / SUM(amfstd_init(:))
-
                     amfstd_tmp =  amfstd_init
 
                     ! frac does not vary within subcycle
@@ -328,10 +326,25 @@
                     ! adaptive sub-timestep
                     elapsed_t = c0
                     cons_error = c0
+                    nsubt = 0
                     DO WHILE (elapsed_t.lt.dt)
+                         nsubt = nsubt + 1
 
                          ! calculate d_amfstd using current afstd
                          d_amfstd_tmp = get_damfstd_wave(amfstd_tmp, fracture_hist, frac)
+
+                         if (ALL(ABS(d_amfstd_tmp).lt.puny)) EXIT
+                         if (amfstd_tmp(1).ge.c1-puny) EXIT
+
+                         if (nsubt.gt.100) then
+                             print *, 'wave frac not converging'
+                             print *, 'd_amfstd_tmp',d_amfstd_tmp
+                             print *, 'afsd ',amfstd_tmp
+                             print *, 'frac ',frac
+                             print *, 'fracture_hist ',fracture_hist
+                             stop
+                         end if
+
 
  
                          ! timestep required for this
@@ -342,8 +355,14 @@
                          amfstd_tmp = amfstd_tmp + subdt * d_amfstd_tmp(:)
 
                          ! check conservation and negatives
-                         if (ANY(amfstd_tmp.lt.-puny)) stop &
+                         if (ANY(amfstd_tmp.lt.-puny)) then 
+                               print *, 'afsd ',amfstd_tmp
+                               print *, 'init afsd',amfstd_tmp - subdt * d_amfstd_tmp(:)
+                               print *, 'subdt ',subdt
+                               print *, subdt * d_amfstd_tmp(:)
+                               stop &
                                  'wb, <0 in loop'
+                         end if
 
                          if (ANY(amfstd_tmp.gt.c1+puny)) stop &
                                  'wb, >1 in loop'
@@ -362,31 +381,32 @@
                     cons_error = SUM(amfstd_tmp) - c1
                     if (ABS(cons_error).gt.1.0e-8_dbl_kind) print *, 'Area conservation error, waves ',cons_error
 
+                  ! area loss: add to first category
+                  if (cons_error.lt.c0) then
+                      amfstd_tmp(1) = amfstd_tmp(1) - cons_error
+                  else
+                  ! area gain: take it from the largest possible category 
+ 
                     do k = nfsd, 1, -1
                         if (amfstd_tmp(k).gt.cons_error) then
                             amfstd_tmp(k) = amfstd_tmp(k) - cons_error
                             EXIT
                         end if
                     end do
+                  end if
 
-                    ! update trcrn    
-                    trcrn(:,n) = amfstd_tmp/SUM(amfstd_tmp)
-
-                    if ((trcrn(1,n) - amfstd_init(1)).lt.(c0-puny)) then
-                        print *, trcrn(1,n) - amfstd_init(1)
-                        print *, 'sum aftsd_tmp ',SUM(amfstd_tmp)
-                        print *, 'aftsd_tmp ',amfstd_tmp
-                        stop 'Wave frac in smallest cat'
-                    end if
+                  ! update trcrn    
+                  trcrn(:,n) = amfstd_tmp
+                  call icepack_cleanup_fsdn(nfsd, trcrn(:,n))
 
 
-                    ! sanity checks
-                    if (ANY(trcrn(:,n).lt.c0-puny)) stop 'neg wb'
-                    if (ANY(trcrn(:,n).gt.c1+puny)) stop '>1 wb'
+                                        ! sanity checks
+                  if (ANY(trcrn(:,n).lt.c0-puny)) stop 'neg wb'
+                  if (ANY(trcrn(:,n).gt.c1+puny)) stop '>1 wb'
 
-                    ! for diagnostics
-                    d_amfstd_wave(:,n) = trcrn(:,n) - amfstd_init(:)  
-                    d_afsd_wave(:) =  d_afsd_wave(:) + aicen(n)*d_amfstd_wave(:,n)
+                  ! for diagnostics
+                  d_amfstd_wave(:,n) = trcrn(:,n) - amfstd_init(:)  
+                  d_afsd_wave(:) =  d_afsd_wave(:) + aicen(n)*d_amfstd_wave(:,n)
 
 
                 end if ! aicen>puny
@@ -430,7 +450,7 @@
 
      ! local variables
 
-     integer (kind=int_kind) :: i, j, k
+     integer (kind=int_kind) :: jj, k
 
      real (kind=dbl_kind), dimension(25) :: &
          lambda,                   &! wavelengths (m)
@@ -453,8 +473,8 @@
       frac_local(:) = c0
  
       ! spatial domain
-      do j = 1, nx
-         X(j)= j*dx
+      do jj = 1, nx
+         X(jj)= jj*dx
       end do
 
       ! dispersion relation
@@ -466,30 +486,30 @@
       ! Fixed phase - not converging waves here 
       phi = pi
 
-      do j = 1, nx
+      do jj = 1, nx
          ! SSH field in space (sum over wavelengths, no attenuation)
-         summand = spec_coeff*COS(2*pi*X(j)/lambda+phi)
-         eta(j)  = SUM(summand)
+         summand = spec_coeff*COS(2*pi*X(jj)/lambda+phi)
+         eta(jj)  = SUM(summand)
       end do
 
       if ((SUM(ABS(eta)) > puny).and.(hbar > puny)) then 
          call get_fraclengths(X, eta, fraclengths, hbar)
       end if
-
-      if (ANY(fraclengths.gt.puny)) then
+  
+      if (ANY(fraclengths.gt.floe_rad_l(1))) then
 
           ! convert from diameter to radii
           fraclengths(:) = fraclengths(:)/c2
 
           ! bin into FS cats
-          do j = 1, size(fraclengths)
+          do jj = 1, size(fraclengths)
           do k = 1, nfsd-1
-             if ((fraclengths(j) >= floe_rad_l(k)) .and. &
-             (fraclengths(j) < floe_rad_l(k+1))) then
+             if ((fraclengths(jj) >= floe_rad_l(k)) .and. &
+             (fraclengths(jj) < floe_rad_l(k+1))) then
              frachistogram(k) = frachistogram(k) + 1
              end if
           end do
-          if (fraclengths(j)>floe_rad_l(nfsd)) frachistogram(nfsd) = frachistogram(nfsd) + 1
+          if (fraclengths(jj)>floe_rad_l(nfsd)) frachistogram(nfsd) = frachistogram(nfsd) + 1
           end do
 
           do k = 1, nfsd
@@ -497,7 +517,7 @@
           end do
 
           ! normalize
-          if (SUM(frac_local) /= c0) frac_local(:) = frac_local(:) / SUM(frac_local(:))
+          if (SUM(frac_local).gt.puny) frac_local(:) = frac_local(:) / SUM(frac_local(:))
 
       end if
 
@@ -653,8 +673,7 @@
             end if
           end do
 
-          do jj = 1, nx-1
-              !print *, jj,fraclengths(jj),fracdistances(jj+1),fracdistances(jj)
+          do jj = 1, n_above
               fraclengths(jj) = fracdistances(jj+1) - fracdistances(jj)
           end do
 
@@ -664,6 +683,11 @@
               print *, fraclengths
               stop 'fl lt 0'
           end if
+          if (ANY(fraclengths.ne.fraclengths)) then
+              print *, fraclengths
+              stop 'nan fl'
+          end if
+
 
 
       end if ! n_above

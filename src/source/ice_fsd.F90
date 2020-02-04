@@ -38,7 +38,7 @@
       public :: init_fsd, init_fsd_bounds,     &
           write_restart_fsd, read_restart_fsd, &
           icepack_renormfsd, wave_dep_growth, partition_area, &
-          icepack_mergefsd 
+          icepack_mergefsd, icepack_cleanup_fsdn 
 
       logical (kind=log_kind), public :: & 
          restart_fsd      ! if .true., read fsd tracer restart file
@@ -434,6 +434,44 @@
         enddo !n
 
       end subroutine renorm_mfstd
+!=======================================================================
+!
+!  Clean up small values and renormalize -- per category
+!
+!  authors:  Elizabeth Hunke, LANL
+!
+
+      subroutine icepack_cleanup_fsdn (nfsd, afsd)
+
+      integer (kind=int_kind), intent(in) :: &
+         nfsd               ! number of floe size categories
+
+      real (kind=dbl_kind), dimension(:), intent(inout) :: &
+         afsd               ! floe size distribution tracer
+
+      ! local variables
+
+      integer (kind=int_kind) :: &
+         k                  ! floe size category index
+
+      real (kind=dbl_kind) :: &
+         tot
+
+      do k = 1, nfsd
+         if (afsd(k) < puny) afsd(k) = c0
+      enddo
+
+      tot = sum(afsd(:))
+      if (tot > puny) then
+         do k = 1, nfsd
+            afsd(k) = afsd(k) / tot ! normalize
+         enddo
+      else ! represents ice-free cell, so set to zero
+         afsd(:) = c0
+      endif
+
+      end subroutine icepack_cleanup_fsdn
+
 
 !=======================================================================
 ! 
