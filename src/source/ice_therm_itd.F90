@@ -1284,7 +1284,6 @@
 
                         if (rside_itd(i,j,n).lt.c0) stop 'rside lt0'
                         rside_itd(i,j,n) = MIN(c1,rside_itd(i,j,n))
-       
                     end if
 
                enddo ! n
@@ -1330,10 +1329,9 @@
 
             ! state variables
             vicen_init(i,j) = vicen(i,j,n)
-                    aicen(i,j,n) = aicen(i,j,n) * (c1 - rside_itd(i,j,n))
-                    vicen(i,j,n) = vicen(i,j,n) * (c1 - rside_itd(i,j,n))
-                    vsnon(i,j,n) = vsnon(i,j,n) * (c1 - rside_itd(i,j,n))
-
+            aicen(i,j,n) = aicen(i,j,n) * (c1 - rside_itd(i,j,n))
+            vicen(i,j,n) = vicen(i,j,n) * (c1 - rside_itd(i,j,n))
+            vsnon(i,j,n) = vsnon(i,j,n) * (c1 - rside_itd(i,j,n))
  
                     ! remove after debugging
                     if (aicen(i,j,n).gt.c1+puny) stop 'an >1, lm'
@@ -1388,6 +1386,8 @@
                                 (c1/floe_rad_c(k) - tmp)
                         end do
 
+                        WHERE (abs(d_afsd_tmp).lt.puny) d_afsd_tmp = c0
+ 
                         ! timestep required for this
                         subdt = get_subdt_fsd(nfsd, afsd_tmp(:), d_afsd_tmp(:))
                         subdt = MIN(subdt, dt)
@@ -1403,9 +1403,6 @@
                                 'A neg mFSTD, lm'
 
 
-                      ! this fixes tiny (e-30) differences from 1
-                      afsd_tmp(:) = afsd_tmp(:)/SUM(afsd_tmp(:))
-
                       call icepack_cleanup_fsdn(nfsd, afsd_tmp(:))
 
                       if (ANY(afsd_tmp(:).lt.(-puny))) stop &
@@ -1419,8 +1416,8 @@
 
                       trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = afsd_tmp(:)
                    else
-                        trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = c0
-                   end if !aicen>0
+                      trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = c0
+                   end if !aicen>puny
                    end if ! rside>0, otherwise do nothing
             
                    ! remove?
@@ -2317,25 +2314,21 @@
                     (c1/floe_rad_c(k) - tmp) 
             end do
 
-            d_afsd_tmp(:) = c0
+           WHERE (abs(d_afsd_tmp).lt.puny) d_afsd_tmp = c0
            
-            if (ALL(ABS(d_afsd_tmp).lt.puny)) then
-                 d_afsd_tmp(:)  = c0
-                 EXIT
-            end if                 
-           
+          
             ! timestep required for this
             subdt = get_subdt_fsd(nfsd, afsd_tmp(:), d_afsd_tmp(:)) 
             subdt = MIN(subdt, dt)
  
-            if (ANY((afsd_tmp(:) + subdt*d_afsd_tmp(:)).lt.c0)) then
+            if (ANY((afsd_tmp(:) + subdt*d_afsd_tmp(:)).lt.-puny)) then
                  print *, i, j, n
                  print *, 'afsd init',afsd_tmp
                  print *, 'subdt ',subdt
                  print *, 'd afsd ',d_afsd_tmp
                  print *, 'dt*dafsd',subdt*d_afsd_tmp
                  print *, 'afsd final ',afsd_tmp(:) + subdt*d_afsd_tmp(:)
-                 stop 
+                 stop 'lg, neg'
                  print *, '----------'
             end if
                         

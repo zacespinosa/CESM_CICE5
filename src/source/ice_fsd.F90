@@ -853,17 +853,9 @@
             if (area_loss.lt.-puny) stop 'area gain'
             if (ABS(area_loss).gt.puny) stop 'area change after correction'
             
-            ! in case of small numerical errors
-            areal_mfstd(:,n) = amfstd_tmp/SUM(amfstd_tmp)
+            call icepack_cleanup_fsdn(nfsd,areal_mfstd(:,n))          
 
-            ! sanity checks
-            if (ANY(areal_mfstd(:,n).lt.-puny)) stop 'neg, mrg'
-
-            WHERE(areal_mfstd(:,n).lt.c0) areal_mfstd(:,n) = c0
-            
-            if (areal_mfstd(1,n).gt.amfstd_init(1)+puny) & 
-                stop 'gain in smallest cat'
-
+ 
             ! diagnostic
             d_amfstd_merge(:,n) = areal_mfstd(:,n) - amfstd_init
 

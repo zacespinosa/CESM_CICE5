@@ -184,6 +184,13 @@
             ! do not use for actual runs!!
             !if (aice(i,j,iblk).lt.0.8_dbl_kind) &
 
+
+
+            ! remove
+            if (aice(i,j,iblk).gt.c1+puny) stop 'aice>1'
+            if (aice(i,j,iblk).lt.-puny) stop 'aice<0'
+        
+
             call wave_frac_fsd(aice(i,j,iblk),  vice(i,j,iblk),        & ! in 
                                aicen(i,j,:,iblk),                      & ! in
                                wave_spectrum(i,j,:,iblk),              & ! in
@@ -191,6 +198,16 @@
                                wave_hs_in_ice(i,j,iblk),               & ! out
                                d_afsd_wave(i,j,:,iblk),                & ! out
                                d_amfstd_wave(i,j,:,:,iblk)             ) ! out
+ 
+            if (aice(i,j,iblk).gt.c1+puny) stop 'B aice>1'
+            if (aice(i,j,iblk).lt.-puny) stop 'B aice<0'
+         
+            !if ((i.eq.7).and.(j.eq.12)) print *, 'aice ',aice(i,j,iblk)
+            !if ((i.eq.7).and.(j.eq.12)) print *, 'aicen ',aicen(i,j,:,iblk)
+            !if ((i.eq.7).and.(j.eq.12)) print *, 'fsd ',trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:,iblk)
+
+
+
             
          end do ! i
          end do  !j
