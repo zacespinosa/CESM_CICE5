@@ -217,7 +217,7 @@ print*, 'HK DEBUG calling get_wave_spec'
         call ice_close_nc(fid) 
 
         wave_spectrum(:,:,:,:) = tmp(:,:,:,1,:)
-        WHERE (wave_spectrum.gt.bignum) wave_spectrum = c0
+        WHERE (wave_spectrum.gt.1.0e+20_dbl_kind) wave_spectrum = c0
 
     end if
    

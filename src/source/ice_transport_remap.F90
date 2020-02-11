@@ -556,7 +556,8 @@
             if (istop > 0 .and. jstop > 0)     &
                  write(nu_diag,*) 'Global i and j:',     &
                                   this_block%i_glob(istop),     &
-                                  this_block%j_glob(jstop) 
+                                  this_block%j_glob(jstop)
+            print *, 'Transport error at ',istop,jstop,uvel(istop,jstop,iblk),vvel(istop,jstop,iblk) 
             call abort_ice('remap transport: bad departure points')
          endif
 
