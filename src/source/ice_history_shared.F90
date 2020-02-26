@@ -383,6 +383,7 @@
            f_VGRDb    , f_NFSD     , & ! LR
 !          f_example  , &
 ! LR
+           f_wave_hs_ice,                               &
            f_fbottom,           f_flateral,             &
            f_vlateral,          f_gradial,              & 
            f_leadarea,          f_latsurfarea ,         & 

@@ -96,7 +96,7 @@
       integer (kind=int_kind), dimension(max_nstrm) :: &
          ntmp
       integer (kind=int_kind) :: nml_error ! namelist i/o error flag
-
+      character(len=1000)     :: line      ! namelist 
       !-----------------------------------------------------------------
       ! read namelist
       !-----------------------------------------------------------------
@@ -111,6 +111,12 @@
          endif
          do while (nml_error > 0)
             read(nu_nml, nml=icefields_nml,iostat=nml_error)
+            if (nml_error/=0) then
+                backspace(nu_nml)
+                read(nu_nml,fmt='(A)') line
+                write(6,'(A)') &
+                   'Invalid line in namelist: '//trim(line)
+            end if
          end do
          if (nml_error == 0) close(nu_nml)
       endif

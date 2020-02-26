@@ -2325,6 +2325,85 @@
   <!-- icefields_nml -->
   <!-- =========================== -->
 
+  <entry id="f_areal_fsd">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+
+  <entry id="f_dafsdmrg">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+  <entry id="f_dafsdwave">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+  <entry id="f_dafsdani">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+  <entry id="f_dafsdlatm">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+  <entry id="f_dafsdlatg">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+  <entry id="f_wave_hs_ice">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+
   <entry id="f_tmask">
     <type>logical</type>
     <category>history</category>
