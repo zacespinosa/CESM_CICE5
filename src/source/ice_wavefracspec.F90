@@ -416,15 +416,9 @@
                   trcrn(:,n) = amfstd_tmp
                   call icepack_cleanup_fsdn(nfsd, trcrn(:,n))
 
-
-                                        ! sanity checks
-                  if (ANY(trcrn(:,n).lt.c0-puny)) stop 'neg wb'
-                  if (ANY(trcrn(:,n).gt.c1+puny)) stop '>1 wb'
-
                   ! for diagnostics
                   d_amfstd_wave(:,n) = trcrn(:,n) - amfstd_init(:)  
                   d_afsd_wave(:) =  d_afsd_wave(:) + aicen(n)*d_amfstd_wave(:,n)
-
 
                 end if ! aicen>puny
             end do ! n
