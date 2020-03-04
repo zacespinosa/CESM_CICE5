@@ -1301,7 +1301,7 @@
          allocate(workr4(nx_block,ny_block,nblocks,ncat_hist,nzilyr))
       endif
       ! 4D (categories, vertical ice)
-      do n = n3Dbcum+1, n4Dicum
+      do n = n3Dfcum+1, n4Dicum
          nn = n - n3Dbcum
          if (avail_hist_fields(n)%vhistfreq == histfreq(ns) .or. write_ic) then
             status  = pio_inq_varid(File,avail_hist_fields(n)%vname,varid)
