@@ -190,6 +190,9 @@ contains
     call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum23')
     call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum24')
     call fldlist_add(fldsToIce_num, fldsToIce, 'wave_elevation_spectrum25')
+    ! from wave tauice 
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wav_tauice1')
+    call fldlist_add(fldsToIce_num, fldsToIce, 'wav_tauice2')
 
 
     do n = 1,fldsToIce_num
