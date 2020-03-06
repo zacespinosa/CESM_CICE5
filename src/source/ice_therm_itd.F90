@@ -1386,8 +1386,6 @@
                                 (c1/floe_rad_c(k) - tmp)
                         end do
 
-                        WHERE (abs(d_afsd_tmp).lt.puny) d_afsd_tmp = c0
- 
                         ! timestep required for this
                         subdt = get_subdt_fsd(nfsd, afsd_tmp(:), d_afsd_tmp(:))
                         subdt = MIN(subdt, dt)
@@ -1399,20 +1397,7 @@
 
                       END DO
                       
-                      if (ANY(afsd_tmp(:).lt.(-puny))) stop &
-                                'A neg mFSTD, lm'
-
-
                       call icepack_cleanup_fsdn(nfsd, afsd_tmp(:))
-
-                      if (ANY(afsd_tmp(:).lt.(-puny))) stop &
-                                'B neg mFSTD, lm'
-                      if (ANY(afsd_tmp(:).gt.(c1+puny))) stop &
-                                '>1 mFSTD, lm'
-                      if (ANY(afsd_tmp(:).ne.afsd_tmp(:))) stop &
-                                'nan mFSTD, lm'
-
-
 
                       trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = afsd_tmp(:)
                    else
@@ -2321,41 +2306,16 @@
             subdt = get_subdt_fsd(nfsd, afsd_tmp(:), d_afsd_tmp(:)) 
             subdt = MIN(subdt, dt)
  
-            if (ANY((afsd_tmp(:) + subdt*d_afsd_tmp(:)).lt.-puny)) then
-                 print *, i, j, n
-                 print *, 'afsd init',afsd_tmp
-                 print *, 'subdt ',subdt
-                 print *, 'd afsd ',d_afsd_tmp
-                 print *, 'dt*dafsd',subdt*d_afsd_tmp
-                 print *, 'afsd final ',afsd_tmp(:) + subdt*d_afsd_tmp(:)
-                 stop 'lg, neg'
-                 print *, '----------'
-            end if
-                        
             ! update fsd and elapsed time
             afsd_tmp(:) = afsd_tmp(:) + subdt*d_afsd_tmp(:)
-              
-
             elapsed_t = elapsed_t + subdt
 
             END DO
 
-            if (ANY(afsd_tmp(:).lt.(-puny))) stop &
-               'A neg mFSTD, lg'
 
             call icepack_cleanup_fsdn(nfsd, afsd_tmp(:))
 
-            if (ANY(afsd_tmp(:).lt.(-puny))) stop &
-               'B neg mFSTD, lg'
-            if (ANY(afsd_tmp(:).gt.(c1+puny))) stop &
-               'B >1 mFSTD, lg'
-            if (ANY(afsd_tmp(:).ne.afsd_tmp(:))) stop &
-               'B nan mFSTD, lg'
-
-
-
             areal_mfstd_latg(i,j,:,n) = afsd_tmp(:)
-
 
             trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = areal_mfstd_latg(i,j,:,n)
  
@@ -2436,24 +2396,16 @@
                         print *, 'areal_mfstd_ni',areal_mfstd_ni
                         print *, ABS(SUM(areal_mfstd_ni)-c1)
                         print *, 'mFSTD not normed, ni'
-            endif
+                    endif
 
-                    areal_mfstd_ni = areal_mfstd_ni / SUM(areal_mfstd_ni)
-
-                    if (ANY(areal_mfstd_ni.lt.c0)) stop &
-                        'neg mFSTD, ni'
+                    call icepack_cleanup_fsdn(nfsd, areal_mfstd_ni)
 
                     ! finally, update FSD
                     trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = areal_mfstd_ni
 
-                    if (SUM(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n)).lt.puny) stop 'should not be punyy'  
-
                     ! for diagnostics
                     d_amfstd_addnew(i,j,:,n) = &
                         trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) -  areal_mfstd_latg(i,j,:,n)
-
-                    if (ANY(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n).gt.c1+puny)) stop  &
-                        'mFSTD > 1 in ani'
 
             end if ! d_an_addnew > puny
 
