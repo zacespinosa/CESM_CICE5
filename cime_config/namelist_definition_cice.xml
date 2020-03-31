@@ -289,8 +289,7 @@
       if true, write restart on last time step of simulation
     </desc>
     <values>
-      <value>.true.</value>
-      <value hgrid='tx0.25v1'>.false.</value>
+      <value>.false.</value>
     </values>
   </entry>
 
@@ -505,8 +504,7 @@
       if true, use time written in core restart file
     </desc>
     <values>
-      <value>.true. </value>
-      <!-- <value hgrid="tx0.25v1">.false.</value> -->
+      <value>.true.</value>
     </values>
   </entry>
 
@@ -1726,17 +1724,17 @@
   <!--   </values> -->
   <!-- </entry> -->
 
-  <!-- <entry id="update_ocn_f"> -->
-  <!--   <type>logical</type> -->
-  <!--   <category>forcing</category> -->
-  <!--   <group>forcing_nml</group> -->
-  <!--   <desc> -->
-  <!--     include frazil water/salt fluxes in ocean fluxes -->
-  <!--   </desc> -->
-  <!--   <values> -->
-  <!--     <value>.false.</value> -->
-  <!--   </values> -->
-  <!-- </entry> -->
+  <entry id="update_ocn_f">
+    <type>logical</type>
+    <category>forcing</category>
+    <group>forcing_nml</group>
+    <desc>
+      include frazil water/salt fluxes in ocean fluxes
+    </desc>
+    <values>
+      <value>.false.</value>
+    </values>
+  </entry>
 
   <entry id="ustar_min">
     <type>real</type>

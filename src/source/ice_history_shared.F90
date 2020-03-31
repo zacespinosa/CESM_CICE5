@@ -133,7 +133,7 @@
          nfsd_hist = nfsd           ! number of floe size categories, LR
 ! LR
 
-      real (kind=real_kind), public :: time_beg(max_nstrm), & ! bounds for averaging
+      real (kind=dbl_kind), public :: time_beg(max_nstrm), & ! bounds for averaging
                                        time_end(max_nstrm), &
                                        time_bounds(2)
 

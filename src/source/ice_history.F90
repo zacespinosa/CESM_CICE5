@@ -229,77 +229,89 @@
       ! Turn on all CMIP fields in one go.
 
       if (f_CMIP(1:1) /= 'x') then
-         f_sithick = f_CMIP
-         f_sisnthick = f_CMIP
-         f_siage = f_CMIP
-         f_sitemptop = f_CMIP
-         f_sitempsnic = f_CMIP
-         f_sitempbot = f_CMIP
-         f_sispeed = f_CMIP
-         f_siu = f_CMIP
-         f_siv = f_CMIP
-         f_sidmasstranx = f_CMIP
-         f_sidmasstrany = f_CMIP
-         f_sistrxdtop = f_CMIP
-         f_sistrydtop = f_CMIP
-         f_sistrxubot = f_CMIP
-         f_sistryubot = f_CMIP
-         f_sicompstren = f_CMIP
-         f_sialb = f_CMIP
-         f_sihc = f_CMIP
-         f_sisnhc = f_CMIP
-         f_sidconcth = f_CMIP
-         f_sidconcdyn = f_CMIP
-         f_sidmassth = f_CMIP
-         f_sidmassdyn = f_CMIP
-         f_sidmassevapsubl = f_CMIP
-         f_sndmasssnf = f_CMIP
-         f_siflswdtop = f_CMIP
-         f_siflswutop = f_CMIP
-         f_siflswdbot = f_CMIP
-         f_sifllwdtop = f_CMIP
-         f_sifllwutop = f_CMIP
-         f_siflsenstop = f_CMIP
-         f_siflsensupbot = f_CMIP
-         f_sifllatstop = f_CMIP
-         f_siflcondtop = f_CMIP
-         f_siflcondbot = f_CMIP
-         f_sipr = f_CMIP
-         f_sifb = f_CMIP
-         f_siflsaltbot = f_CMIP
-         f_siflfwbot = f_CMIP
-         f_siflfwdrain = f_CMIP
-         f_siforcetiltx = f_CMIP
-         f_siforcetilty = f_CMIP
-         f_siforcecoriolx = f_CMIP
-         f_siforcecorioly = f_CMIP
-         f_siforceintstrx = f_CMIP
-         f_siforceintstry = f_CMIP
-         f_siitdconc = f_CMIP
-         f_siitdthick = f_CMIP
-         f_siitdsnthick = f_CMIP
-         f_sidragtop = f_CMIP
-         f_sistreave = f_CMIP
-         f_sistremax = f_CMIP
-         f_sirdgthick = f_CMIP
-         f_aice = f_CMIP
-         f_hi = f_CMIP
-         f_hs = f_CMIP
-         f_divu = f_CMIP
-         f_icepresent = f_CMIP
-         f_shear = f_CMIP
-         f_dvidtd = f_CMIP
-         f_dvidtt = f_CMIP
-         f_congel = f_CMIP
-         f_frazil = f_CMIP
-         f_meltl = f_CMIP
-         f_meltb = f_CMIP
-         f_meltt = f_CMIP
-         f_melts = f_CMIP
-         f_snoice = f_CMIP
-         f_aicen = f_CMIP
-         f_vicen = f_CMIP
-         f_vsnon = f_CMIP
+
+        f_sithick       = 'mxxxx'
+        f_sisnthick     = 'mxxxx'
+        f_siage = 'mxxxx'
+        f_sitemptop     = 'mxxxx'
+        f_sitempsnic    = 'mxxxx'
+        f_sitempbot     = 'mxxxx'
+        f_sispeed       = 'mxxxx'
+        f_siu   = 'mxxxx'
+        f_siv   = 'mxxxx'
+        f_sidmasstranx  = 'mxxxx'
+        f_sidmasstrany  = 'mxxxx'
+        f_sistrxdtop    = 'mxxxx'
+        f_sistrydtop    = 'mxxxx'
+        f_sistrxubot    = 'mxxxx'
+        f_sistryubot    = 'mxxxx'
+        f_sicompstren   = 'mxxxx'
+        f_sialb = 'mxxxx'
+        f_sihc  = 'mxxxx'
+        f_sisnhc        = 'mxxxx'
+        f_sidconcth     = 'mxxxx'
+        f_sidconcdyn    = 'mxxxx'
+        f_sidmassth     = 'mxxxx'
+        f_sidmassdyn    = 'mxxxx'
+        f_sidmassgrowthwat      = 'mxxxx'
+        f_sidmassgrowthbot      = 'mxxxx'
+        f_sidmasssi     = 'mxxxx'
+        f_sidmassevapsubl       = 'mxxxx'
+        f_sndmasssubl   = 'mxxxx'
+        f_sidmassmelttop        = 'mxxxx'
+        f_sidmassmeltbot        = 'mxxxx'
+        f_sidmasslat    = 'mxxxx'
+        f_sndmasssnf    = 'mxxxx'
+        f_sndmassmelt   = 'mxxxx'
+        f_siflswdtop    = 'mxxxx'
+        f_siflswutop    = 'mxxxx'
+        f_siflswdbot    = 'mxxxx'
+        f_sifllwdtop    = 'mxxxx'
+        f_sifllwutop    = 'mxxxx'
+        f_siflsenstop   = 'mxxxx'
+        f_siflsensupbot = 'mxxxx'
+        f_sifllatstop   = 'mxxxx'
+        f_siflcondtop   = 'mxxxx'
+        f_siflcondbot   = 'mxxxx'
+        f_sipr  = 'mxxxx'
+        f_sifb  = 'mxxxx'
+        f_siflsaltbot   = 'mxxxx'
+        f_siflfwbot     = 'mxxxx'
+        f_siflfwdrain   = 'mxxxx'
+        f_siforcetiltx  = 'mxxxx'
+        f_siforcetilty  = 'mxxxx'
+        f_siforcecoriolx        = 'mxxxx'
+        f_siforcecorioly        = 'mxxxx'
+        f_siforceintstrx        = 'mxxxx'
+        f_siforceintstry        = 'mxxxx'
+        f_siitdconc     = 'mxxxx'
+        f_siitdthick    = 'mxxxx'
+        f_siitdsnthick  = 'mxxxx'
+        f_sidragtop     = 'mxxxx'
+        f_sistreave     = 'mxxxx'
+        f_sistremax     = 'mxxxx'
+        f_sirdgthick    = 'mxxxx'
+        f_aice  = 'mxxxx'
+        f_hi    = 'mxxxx'
+        f_hs    = 'mxxxx'
+        f_divu  = 'mxxxx'
+        f_icepresent    = 'mxxxx'
+        f_shear = 'mxxxx'
+        f_dvidtd        = 'mxxxx'
+        f_dvidtt        = 'mxxxx'
+        f_congel        = 'mxxxx'
+        f_frazil        = 'mxxxx'
+        f_meltl = 'mxxxx'
+        f_meltb = 'mxxxx'
+        f_meltt = 'mxxxx'
+        f_melts = 'mxxxx'
+        f_snoice        = 'mxxxx'
+        f_aicen = 'mxxxx'
+        f_vicen = 'mxxxx'
+        f_vsnon = 'mxxxx'
+
+      ! Don't turn off CICE duplicates in code.
+
       endif
 
       if (f_CMIP(2:2) == 'd') then
@@ -2776,7 +2788,7 @@
            do j = jlo, jhi
            do i = ilo, ihi
               if (aice(i,j,iblk) > puny) then
-                 worka(i,j) = evapi(i,j,iblk)*rhoi
+                 worka(i,j) = evapi(i,j,iblk)/dt
               endif
            enddo
            enddo
@@ -2824,7 +2836,7 @@
            do j = jlo, jhi
            do i = ilo, ihi
               if (aice(i,j,iblk) > puny) then
-                 worka(i,j) = evaps(i,j,iblk)*rhos
+                 worka(i,j) = evaps(i,j,iblk)/dt
               endif
            enddo
            enddo
@@ -2836,7 +2848,7 @@
            do j = jlo, jhi
            do i = ilo, ihi
               if (aice(i,j,iblk) > puny) then
-                 worka(i,j) = aice(i,j,iblk)*fsnow(i,j,iblk)*rhos
+                 worka(i,j) = aice(i,j,iblk)*fsnow(i,j,iblk)
               endif
            enddo
            enddo
