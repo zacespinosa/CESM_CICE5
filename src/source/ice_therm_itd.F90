@@ -1460,8 +1460,6 @@
            
                   
          call icepack_cleanup_fsd (trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:) )
-         if (ANY(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:) > c1 + puny)) stop 'latm'
-
 
 
          ! diagnostics
@@ -1646,7 +1644,7 @@
       real (kind=dbl_kind), dimension(nx_block,ny_block,nfreq), intent(in)  :: &
          wave_spectrum    ! ocean surface wave spectrum, E(f) (m^2 s)
 
-     real (kind=dbl_kind), dimension(nx_block,ny_block,nfsd), intent(out) :: &
+     real (kind=dbl_kind), dimension(nx_block,ny_block,nfsd), intent(inout) :: &
                           ! change in floe size distribution (area)
          d_afsd_latg  , & ! due to fsd lateral growth
          d_afsd_newi      ! new ice formation
@@ -1733,7 +1731,6 @@
       real (kind=dbl_kind) :: &
          tot_latg, &  ! total fsd lateral growth in open water
          ai0mod       ! ai0new - tot_latg
-
 
       real (kind=dbl_kind), dimension (ncat) :: &
         area2   ! area after lateral growth and before new ice formation
@@ -1885,6 +1882,7 @@
          ! history diagnostics
          if (.NOT.tr_fsd) frazil(i,j) = vi0new(ij)
 
+         ! NB this won't work with FSD
          if (present(frz_onset) .and. present(yday)) then
             if (frazil(i,j) > puny .and. frz_onset(i,j) < puny) &
                  frz_onset(i,j) = yday
@@ -2138,6 +2136,7 @@
       ! to category 1, while the others use a salinity profile.
       !-----------------------------------------------------------------
 
+
       ncats = 1                  ! add new ice to category 1 by default
       if (tr_fsd) ncats = ncat   ! add new ice laterally to all categories
   
@@ -2172,22 +2171,23 @@
             trcrn(i,j,nt_FY,n) = min(trcrn(i,j,nt_FY,n), c1)
          endif
 
+
+
          if (tr_fsd) & ! evolve the floe size distribution
             ! both new frazil ice and lateral growth
-            call fsd_add_new_ice (n,                         &
-                                  dt,         ai0new(ij),    &
-                                  d_an_latg(i,j,:),          &
-                                  d_an_newi(i,j,:),          &
-                                  G_radial(i,j),   area2(:), &
-                                  wave_sig_ht(i,j),          &
-                                  wave_spectrum(i,j,:),      &
-                                  d_afsd_latg(i,j,:),        &
-                                  d_afsd_newi(i,j,:),        &
-                                  afsdn(i,j,:,:),            &
-                                  aicen_init(i,j,:),         &
-                                  aicen(i,j,:),              &
-                                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:))
-
+            call fsd_add_new_ice (n,                         & ! in
+                                  dt,         ai0new(ij),    & ! in
+                                  d_an_latg(i,j,:),          & ! in
+                                  d_an_newi(i,j,:),          & ! in
+                                  G_radial(i,j),   area2(:), & ! in
+                                  wave_sig_ht(i,j),          & ! in
+                                  wave_spectrum(i,j,:),      & ! in 
+                                  d_afsd_latg(i,j,:),        & ! inout
+                                  d_afsd_newi(i,j,:),        & ! inout
+                                  afsdn(i,j,:,:),            & ! in
+                                  aicen_init(i,j,:),         & ! in
+                                  aicen(i,j,:),              & ! in
+                                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:)) ! inout
 
 
          if (vicen(i,j,n) > puny) then
@@ -2226,6 +2226,7 @@
          !endif ! d_an_tot
  
       enddo !ij
+
 
       do k = 1, nilyr
 !DIR$ CONCURRENT !Cray
@@ -2313,6 +2314,8 @@
                            sss,        ocean_bio,  flux_bio, &
                            hsurp,                            &
                            l_stop,     istop,      jstop)
+
+
 
       end subroutine add_new_ice
 

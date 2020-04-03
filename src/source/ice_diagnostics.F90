@@ -782,7 +782,8 @@
                   hiavg(n) = vice(i,j,iblk)/paice(n)
                   hsavg(n) = vsno(i,j,iblk)/paice(n)
                   if (tr_brine) hbravg(n) = trcr(i,j,nt_fbri,iblk)* hiavg(n)
-               endif
+
+                  if (tr_fsd) then
                      do nc = 1, ncat
                      do k = 1, nfsd
                         fsdavg(n) = fsdavg(n) &
@@ -790,6 +791,9 @@
                                   * aicen(i,j,nc,iblk)
                      enddo
                      enddo
+                  end if
+
+               endif
                psalt(n) = work2(i,j,iblk)
                pTsfc(n) = trcr(i,j,nt_Tsfc,iblk)   ! ice/snow sfc temperature
                pevap(n) = evap(i,j,iblk)*dt/rhoi   ! sublimation/condensation
@@ -862,8 +866,6 @@
         print *, 'Arctic','Antarctic'
 
         print *, 'total ice area  (km^2) = ',arean,  areas
-        print *, 'avg fsd rep radius (m) = ',fsdavg(1),fsdavg(2)
-
         write(nu_diag,901) 'total ice extent(km^2) = ',extentn,extents
         write(nu_diag,901) 'total ice volume (m^3) = ',shmaxn, shmaxs
         write(nu_diag,901) 'total snw volume (m^3) = ',snwmxn, snwmxs
@@ -992,6 +994,7 @@
         write(nu_diag,900) 'area fraction          = ',paice(1),paice(2)
         write(nu_diag,900) 'avg ice thickness (m)  = ',hiavg(1),hiavg(2)
         write(nu_diag,900) 'avg snow depth (m)     = ',hsavg(1),hsavg(2)
+        write(nu_diag,900) 'avg fsd rep radius (m) = ',fsdavg(1),fsdavg(2)
         write(nu_diag,900) 'avg salinity (ppt)     = ',psalt(1),psalt(2)
         write(nu_diag,900) 'avg brine thickness (m)= ',hbravg(1),hbravg(2)
        if (calc_Tsfc) then

@@ -219,7 +219,6 @@
 ! CMB
       ! floe size distribution tracer
       if (tr_fsd) then
-         print *, 'runtype =',runtype
          if (trim(runtype) == 'continue') restart_fsd = .true.
          if (restart_fsd) then
             call read_restart_fsd

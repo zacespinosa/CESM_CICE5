@@ -800,7 +800,6 @@
                num_avail_hist_fields_3Db = num_avail_hist_fields_3Db + 1
             elseif (vcoord(11:14) == 'NFSD' .and. vcoord(16:19) == 'time') then
                num_avail_hist_fields_3Df = num_avail_hist_fields_3Df + 1
-               print *, 'define hist fields ',num_avail_hist_fields_3Df
             elseif (vcoord(11:15) == 'VGRDi' .and. vcoord(17:20) == 'NCAT') then
                num_avail_hist_fields_4Di = num_avail_hist_fields_4Di + 1
             elseif (vcoord(11:15) == 'VGRDs' .and. vcoord(17:20) == 'NCAT') then

@@ -623,9 +623,6 @@
             status = pio_put_att(File,varid,'missing_value',spval)
             status = pio_put_att(File,varid,'_FillValue',spval)
 
-            print *, trim(avail_hist_fields(n)%vname), trim(avail_hist_fields(n)%vdesc), &
-                     trim(avail_hist_fields(n)%vunit), trim(avail_hist_fields(n)%vcoord), trim(avail_hist_fields(n)%vcellmeas)
-
             ! Add cell_methods attribute to variables if averaged
             if (hist_avg .and. histfreq(ns) /= '1') then
                 status = pio_put_att(File,varid,'cell_methods','time: mean')

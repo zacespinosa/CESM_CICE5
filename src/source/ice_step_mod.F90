@@ -924,8 +924,10 @@
 
          ! significant wave height for FSD
          if (tr_fsd) then
+         wave_sig_ht(:,:,iblk) = c0
          do j = 1, ny_block
          do i = 1, nx_block
+         if (ANY(wave_spectrum(i,j,:,iblk).gt.1e10)) wave_spectrum(i,j,:,iblk) = c0
          wave_sig_ht(i,j,iblk) = c4*SQRT(SUM(wave_spectrum(i,j,:,iblk)*dwavefreq(:)))
          end do
          end do
@@ -1064,7 +1066,6 @@
 
 
          call ice_timer_stop(timer_addnewice, iblk)
-
 
 
         if (l_stop) then

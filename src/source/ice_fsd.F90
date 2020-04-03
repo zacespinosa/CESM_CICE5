@@ -272,10 +272,6 @@
             totfrac = totfrac + afsd(k)
         enddo
 
-      ! remove
-      afsd(:) = c0
-      afsd(1) = c1 
- 
         do k = 1, nfsd 
             afsdn(:,:,k,:) = afsd(k)/totfrac
         enddo
@@ -589,8 +585,8 @@
          wave_spectrum  ! ocean surface wave spectrum as a function of frequency
                         ! power spectral density of surface elevation, E(f) (units m^2 s)
 
-
       real (kind=dbl_kind), dimension(ncat), intent(in) :: &
+         area2      , & ! area after lateral growth, before new ice formation
          d_an_latg  , & ! change in aicen due to lateral growth
          d_an_newi  , & ! change in aicen due to frazil ice formation
          aicen_init , & ! fractional area of ice
@@ -598,9 +594,6 @@
 
       real (kind=dbl_kind), dimension (nfsd,ncat), intent(in) :: &
          afsdn          ! floe size distribution tracer
-
-      real (kind=dbl_kind), dimension (ncat), intent(in) :: &
-         area2          ! area after lateral growth, before new ice formation
 
       real (kind=dbl_kind), dimension (nfsd,ncat), intent(inout) :: &
          trcrn          ! ice tracers fsd
@@ -630,6 +623,7 @@
          f_flx          ! finite differences in floe size
 
       afsdn_latg(:,n) = afsdn(:,n)  ! default
+      trcrn(:,n) = afsdn(:,n)
 
       if (d_an_latg(n) > puny) then ! lateral growth
 
@@ -690,7 +684,7 @@
          ! add new frazil ice to smallest thickness
          if (d_an_newi(n) > puny) then
 
-             afsd_ni(:) = c0
+            afsd_ni(:) = c0
 
             if (SUM(afsdn_latg(:,n)) > puny) then ! fsd exists
 
@@ -733,18 +727,13 @@
 
             endif ! entirely new ice or not
 
-
             trcrn(:,n) = afsd_ni(:)
             call icepack_cleanup_fsdn (trcrn(:,n))
-            !  remove after debug
-            if (ANY(trcrn(n:,n) > c1 + puny)) stop 'newi'
 
         endif ! d_an_newi > puny
       endif    ! n = 1
 
       ! history/diagnostics
-      d_afsd_newi(:) = c0
-      d_afsd_latg(:) = c0
       do k = 1, nfsd
          ! sum over n
          d_afsd_latg(k) = d_afsd_latg(k) &
@@ -754,6 +743,7 @@
                 + aicen(n)*trcrn(k,n) & ! after latg and newi
                 - area2(n)*afsdn_latg(k,n) ! after latg
       enddo    ! k
+
 
       end subroutine fsd_add_new_ice
 

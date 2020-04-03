@@ -1151,7 +1151,6 @@
              nt_fsd = ntrcr + 1   ! tracer index for
              ntrcr = ntrcr + nfsd ! floe size categories
          endif
-         print *, 'nt_fsd ',nt_fsd,'ntrcr ',ntrcr             
  
          nt_aero = 0
          if (tr_aero) then
