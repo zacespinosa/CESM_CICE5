@@ -112,7 +112,7 @@
           rhofresh, Tffresh, Lfresh, Lvap, ice_ref_salinity, field_loc_center, &
           m2_to_km2, awtvdr, awtidr, awtvdf, awtidf
       use ice_domain, only: distrb_info, nblocks
-      use ice_domain_size, only: ncat, n_aero, n_iso, max_blocks
+      use ice_domain_size, only: ncat, n_aero, n_iso, max_blocks, nfsd
       use ice_fileunits, only: flush_fileunit
       use ice_flux, only: alvdr, alidr, alvdf, alidf, evap, fsnow, frazil, &
           fswabs, fswthru, flw, flwout, fsens, fsurf, flat, frzmlt_init, frain, fpond, &
@@ -126,6 +126,7 @@
       use ice_state ! everything
       use ice_therm_shared, only: calc_Tsfc, ktherm
       use ice_zbgc_shared, only: rhosi
+      use ice_fsd, only: floe_rad_c, floe_binwidth
 #ifdef CESMCOUPLED
       use ice_prescribed_mod, only: prescribed_ice
 #endif
@@ -136,7 +137,7 @@
       ! local variables
 
       integer (kind=int_kind) :: &
-         i, j, n, iblk
+         i, j, n, iblk, nc, k
 
       ! hemispheric state quantities
       real (kind=dbl_kind) :: &
@@ -176,7 +177,7 @@
          paice, pTair, pQa, pfsnow, pfrain, pfsw, pflw, & 
          pTsfc, pevap, pfswabs, pflwout, pflat, pfsens, &
          pfsurf, pfcondtop, psst, psss, pTf, hiavg, hsavg, hbravg, &
-         pfhocn, psalt, &
+         pfhocn, psalt, fsdavg, &
          pmeltt, pmeltb, pmeltl, psnoice, pdsnow, pfrazil, pcongel
 
       real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks) :: &
@@ -773,6 +774,7 @@
                pflw(n) = flw(i,j,iblk)             ! longwave radiation
                paice(n) = aice(i,j,iblk)           ! ice area
                
+               fsdavg(n) = c0                      ! avg floe effective radius
                hiavg(n) = c0                       ! avg snow/ice thickness
                hsavg(n) = c0
                hbravg(n) = c0                      ! avg brine thickness
@@ -781,6 +783,13 @@
                   hsavg(n) = vsno(i,j,iblk)/paice(n)
                   if (tr_brine) hbravg(n) = trcr(i,j,nt_fbri,iblk)* hiavg(n)
                endif
+                     do nc = 1, ncat
+                     do k = 1, nfsd
+                        fsdavg(n) = fsdavg(n) &
+                                  + trcrn(i,j,nt_fsd+k-1,nc,iblk) * floe_rad_c(k) *floe_binwidth(k) &
+                                  * aicen(i,j,nc,iblk)
+                     enddo
+                     enddo
                psalt(n) = work2(i,j,iblk)
                pTsfc(n) = trcr(i,j,nt_Tsfc,iblk)   ! ice/snow sfc temperature
                pevap(n) = evap(i,j,iblk)*dt/rhoi   ! sublimation/condensation
@@ -847,12 +856,14 @@
       !-----------------------------------------------------------------
       ! start spewing
       !-----------------------------------------------------------------
-
+      
       if (my_task == master_task) then
+ 
+        print *, 'Arctic','Antarctic'
 
-        write(nu_diag,899) 'Arctic','Antarctic'
+        print *, 'total ice area  (km^2) = ',arean,  areas
+        print *, 'avg fsd rep radius (m) = ',fsdavg(1),fsdavg(2)
 
-        write(nu_diag,901) 'total ice area  (km^2) = ',arean,  areas
         write(nu_diag,901) 'total ice extent(km^2) = ',extentn,extents
         write(nu_diag,901) 'total ice volume (m^3) = ',shmaxn, shmaxs
         write(nu_diag,901) 'total snw volume (m^3) = ',snwmxn, snwmxs
@@ -983,8 +994,7 @@
         write(nu_diag,900) 'avg snow depth (m)     = ',hsavg(1),hsavg(2)
         write(nu_diag,900) 'avg salinity (ppt)     = ',psalt(1),psalt(2)
         write(nu_diag,900) 'avg brine thickness (m)= ',hbravg(1),hbravg(2)
-
-        if (calc_Tsfc) then
+       if (calc_Tsfc) then
            write(nu_diag,900) 'surface temperature(C) = ',pTsfc(1),pTsfc(2)
            write(nu_diag,900) 'absorbed shortwave flx = ',pfswabs(1), &
                                                           pfswabs(2)

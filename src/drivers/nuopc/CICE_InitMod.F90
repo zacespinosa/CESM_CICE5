@@ -63,8 +63,9 @@
       use ice_transport_driver , only: init_transport
       use ice_zbgc             , only: init_zbgc
       use ice_zbgc_shared      , only: skl_bgc
-      use ice_fsd              , only: init_fsd_bounds
-
+      use ice_fsd              , only: init_fsd_bounds, wave_spec
+      use ice_wavefracspec     , only: init_spwf_fullnet, init_spwf_class
+ 
       ! !INPUT/OUTPUT PARAMETERS:
       integer (kind=int_kind), optional, intent(in) :: mpicom_ice ! communicator for sequential ccsm
       !----------------------------------------------------
@@ -124,7 +125,10 @@
       !--------------------------------------------------------------------
 
       call init_forcing_atmo    ! initialize atmospheric forcing (standalone)
-      call init_forcing_wave    ! initialize dfreq, freq for www coupling
+      if (tr_fsd) call init_forcing_wave    ! initialize dfreq, freq for www coupling
+      if (tr_fsd .and. wave_spec) call init_spwf_fullnet ! for nn - later change logical of these options
+      if (tr_fsd .and. wave_spec) call init_spwf_class
+
 
       if (runtype == 'initial' .and. .not. restart) then
          call init_shortwave    ! initialize radiative transfer using current swdn
@@ -215,12 +219,13 @@
 ! CMB
       ! floe size distribution tracer
       if (tr_fsd) then
+         print *, 'runtype =',runtype
          if (trim(runtype) == 'continue') restart_fsd = .true.
          if (restart_fsd) then
             call read_restart_fsd
          else
             do iblk = 1, nblocks
-               call init_fsd(ice_ic, nx_block, ny_block, iblk, ncat, nfsd, trcrn(:,:,:,:,iblk))
+               call init_fsd(ice_ic, nx_block, ny_block, iblk, ncat, nfsd, trcrn(:,:,nt_fsd:nt_fsd+nfsd-1,:,iblk))
             enddo ! iblk
          endif
       endif

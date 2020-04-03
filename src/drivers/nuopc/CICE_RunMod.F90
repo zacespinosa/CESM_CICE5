@@ -17,6 +17,7 @@ module CICE_RunMod
   use ice_kinds_mod
   use perf_mod      , only: t_startf, t_stopf, t_barrierf
   use ice_fileunits , only: nu_diag
+  use ice_communicate, only: my_task, master_task
 
   implicit none
   private
@@ -61,6 +62,7 @@ contains
     istep  = istep  + 1    ! update time step counters
     istep1 = istep1 + 1
     time = time + dt       ! determine the time and date
+    if (my_task.eq.master_task) print *, 'time=',time 
 
     call init_flux_atm     ! initialize atmosphere fluxes sent to coupler
     call init_flux_ocn     ! initialize ocean fluxes sent to coupler
@@ -124,8 +126,8 @@ contains
     use ice_zbgc_shared    , only: skl_bgc
     use ice_communicate    , only: MPI_COMM_ICE
     use ice_prescribed_mod
-    use ice_wavefracspec   , only: wave_spec, icepack_wavefracfsd !LR
-    use ice_fsd            , only: write_restart_fsd !LR
+    use ice_wavefracspec   , only: icepack_wavefracfsd !LR
+    use ice_fsd            , only: write_restart_fsd, wave_spec !LR
 
     character(len=*), intent(in), optional :: restart_filename
 

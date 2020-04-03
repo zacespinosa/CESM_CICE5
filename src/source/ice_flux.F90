@@ -313,9 +313,6 @@
          congel, & ! basal ice growth         (m/step-->cm/day)
          frazil, & ! frazil ice growth        (m/step-->cm/day)
          frazil_diag, & ! frazil ice growth diagnostic (m/step-->cm/day)
-! LR
-         vlateral,&! lateral ice growth       (m/step-->cm/day)     
-! LR
          snoice, & ! snow-ice formation       (m/step-->cm/day)
          meltt , & ! top ice melt             (m/step-->cm/day)
          melts , & ! snow melt                (m/step-->cm/day)
@@ -351,21 +348,20 @@
          fhocn_ai, & ! net heat flux to ocean (W/m^2)
          fswthru_ai, &  ! shortwave penetrating to ocean (W/m^2)
 ! LR
-         G_radial, &    ! lateral melt rate (m/s)
          lead_area,  &  ! fractional area of ocean defined as lead region 
          latsurf_area, & ! fractional area of ice on lateral sides of floes
-         fbottom, &     ! flux that goes to bottom melt (W/m^2)
-         flateral
+         fbottom,      & ! should this be here?
+         fside          ! lateral heat flux (W/m^2)
 
       real (kind=dbl_kind), dimension (nx_block,ny_block,nfreq,max_blocks), public :: &
           wave_spectrum     ! wave spectrum in 25 frequencies - e(f) from Wavewatch
                             ! power spectral density of surface elevation (m^2 s)
 
      real (kind=dbl_kind), dimension (nfreq), public :: &
-          freq, dfreq        ! freqency values and binwidths
+          wavefreq, dwavefreq        ! freqency values and binwidths
 
       real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), public :: &
-         wave_hs_in_ice ! calculated from attenuated spectrum (m)
+         wave_sig_ht ! calculated from wave spectrum (m)
 ! LR 
 
       ! Used with data assimilation in hadgem drivers
@@ -387,10 +383,7 @@
       real (kind=dbl_kind), dimension(nx_block,ny_block,nilyr+1,max_blocks), public :: &
          salinz    ,&   ! initial salinity  profile (ppt)   
          Tmltz          ! initial melting temperature (^oC)
-! CMB
 
-      real (kind=dbl_kind), dimension (nx_block,ny_block,ncat,max_blocks), public :: &
-         rside_itd     ! fraction of ice area that melts laterally for each itd cat
 
 
 !=======================================================================

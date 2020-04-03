@@ -27,9 +27,7 @@
       use ice_kinds_mod
       use ice_fileunits, only: nu_diag
       use ice_domain_size, only: ncat, nilyr, nslyr, nblyr, max_nstrm
-!liuxy
       use ice_domain_size, only: nfsd
-!liuxy
  
       implicit none
 
@@ -87,30 +85,20 @@
          num_avail_hist_fields_3Dz  = 0, & ! Number of 3D fields (vertical)
          num_avail_hist_fields_3Dc  = 0, & ! Number of 3D fields (categories)
          num_avail_hist_fields_3Db  = 0, & ! Number of 3D fields (vertical biology)
-! LR
          num_avail_hist_fields_3Df  = 0, & ! Number of 3D fields (fsd)
-! LR
          num_avail_hist_fields_4Di  = 0, & ! Number of 4D fields (categories,vertical), ice
          num_avail_hist_fields_4Ds  = 0, & ! Number of 4D fields (categories,vertical), snow
-         num_avail_hist_fields_4Db  = 0, & ! Number of 4D fields (categories,vertical), ice-biology
-! LR
-         num_avail_hist_fields_4Df  = 0    ! Number of 4D fields (categories,fsd), fsd 
-! LR
+         num_avail_hist_fields_4Db  = 0    ! Number of 4D fields (categories,vertical), ice-biology
 
       integer (kind=int_kind), public :: &        ! cumulative counts
          n2D     , & ! num_avail_hist_fields_2D
          n3Dccum , & ! n2D     + num_avail_hist_fields_3Dc
          n3Dzcum , & ! n3Dccum + num_avail_hist_fields_3Dz
          n3Dbcum , & ! n3Dzcum + num_avail_hist_fields_3Db
-! LR 
          n3Dfcum , & ! n3Dbcum + num_avail_hist_fields_3Df
-! LR
          n4Dicum , & ! n3Dfcum + num_avail_hist_fields_4Di
          n4Dscum , & ! n4Dicum + num_avail_hist_fields_4Ds
          n4Dbcum , & ! n4Dscum + num_avail_hist_fields_4Db
-! LR
-         n4Dfcum , & ! n4Dbcum + num_avail_hist_fields_4Df
-! LR
          nzlyr   , & ! vertical dimension (temp variable)
          nzlyrb      ! vertical dimension of biology grid (temp variable)
 
@@ -127,11 +115,9 @@
       integer (kind=int_kind), parameter, public :: &
          nvar = 12              , & ! number of grid fields that can be written
                                     !   excluding grid vertices
-! LR 
          nvarz = 5              , & ! number of category/vertical grid fields written
          ncat_hist = ncat       , & ! number of ice categories written <= ncat
          nfsd_hist = nfsd           ! number of floe size categories, LR
-! LR
 
       real (kind=real_kind), public :: time_beg(max_nstrm), & ! bounds for averaging
                                        time_end(max_nstrm), &
@@ -142,15 +128,10 @@
          a3Dz(:,:,:,:,:)  , & ! field accumulations/averages, 3D vertical
          a3Db(:,:,:,:,:)  , & ! field accumulations/averages, 3D vertical biology
          a3Dc(:,:,:,:,:)  , & ! field accumulations/averages, 3D categories
-! LR
          a3Df(:,:,:,:,:)  , & ! field accumulations/averages, 3D categories (fsd) 
-! LR
          a4Di(:,:,:,:,:,:), & ! field accumulations/averages, 4D categories,vertical, ice
          a4Ds(:,:,:,:,:,:), & ! field accumulations/averages, 4D categories,vertical, snow
-         a4Db(:,:,:,:,:,:), & ! field accumulations/averages, 4D categories,vertical, bio
-! LR    
-         a4Df(:,:,:,:,:,:)    ! field accumulations/averages, 4D categories,vertical, fsd
-! LR    
+         a4Db(:,:,:,:,:,:)    ! field accumulations/averages, 4D categories,vertical, bio
 
       real (kind=dbl_kind), allocatable, public :: &
          Tinz4d (:,:,:,:)    , & ! array for Tin
@@ -177,23 +158,17 @@
          ustr3Dc = 'ULON ULAT NCAT time', & ! vcoord for U cell quantities, 3D
          tstr3Db = 'TLON TLAT VGRDb time', & ! vcoord for T cell quantities, 3D
          ustr3Db = 'ULON ULAT VGRDb time', & ! vcoord for U cell quantities, 3D
-! LR
          tstr3Df = 'TLON TLAT NFSD time', & ! vcoord for T cell quantities, 3D
          ustr3Df = 'ULON ULAT NFSD time', & ! vcoord for U cell quantities, 3D
-! LR
 !ferret
          tstr4Di = 'TLON TLAT VGRDi NCAT', & ! vcoord for T cell, 4D, ice
          ustr4Di = 'ULON ULAT VGRDi NCAT', & ! vcoord for U cell, 4D, ice
          tstr4Ds = 'TLON TLAT VGRDs NCAT', & ! vcoord for T cell, 4D, snow
          ustr4Ds = 'ULON ULAT VGRDs NCAT', & ! vcoord for U cell, 4D, snow
          tstr4Db = 'TLON TLAT VGRDb NCAT', & ! vcoord for T cell, 4D, bio
-         ustr4Db = 'ULON ULAT VGRDb NCAT', & ! vcoord for U cell, 4D, bio
+         ustr4Db = 'ULON ULAT VGRDb NCAT'    ! vcoord for U cell, 4D, bio
 !ferret
-!LR
-         tstr4Df = 'TLON TLAT NFSD NCAT', & ! vcoord for T cell, 4D, fsd
-         ustr4Df = 'ULON ULAT NFSD NCAT'    ! vcoord for U cell, 4D, fsd
-!LR
-!         tstr4Di  = 'TLON TLAT VGRDi NCAT time', & ! ferret can not handle time 
+!         tstr4Di  = 'TLON TLAT VGRDi NCAT time', & ! ferret can not handle time
 !         ustr4Di  = 'ULON ULAT VGRDi NCAT time', & ! index on 4D variables.
 !         tstr4Ds  = 'TLON TLAT VGRDs NCAT time', & ! Use 'ferret' lines instead
 !         ustr4Ds  = 'ULON ULAT VGRDs NCAT time', & ! (below also)
@@ -217,31 +192,15 @@
 
       character (len=max_nstrm), public :: &
 !          f_example   = 'md', &
-! LR 
-           f_wave_hs_ice     = 'm',                          &
-           f_fbottom         = 'm', f_flateral        = 'm', &
-           f_vlateral        = 'm', f_gradial         = 'm', & 
-           f_leadarea        = 'm', f_latsurfarea     = 'm', &
-           f_concforww       = 'm', f_diamforww       = 'm', &
-           f_thickforww      = 'm'                         , &
-           f_wavespectrum    = 'm',                          &
-           f_wave_hs         = 'm', f_wave_tz         = 'm', &
-           f_nearest_wave_hs = 'm'                         , &
-           f_nearest_wave_tz = 'm'                         , &
-           f_wave_search_i   = 'm', f_wave_search_j   = 'm', &
-           f_ice_search_i    = 'm', f_ice_search_j    = 'm', &
-           f_cml_nfloes      = 'm', f_nfloes          = 'm', &
-           f_hm              = 'm',& 
-           f_areal_fsd       = 'm', f_areal_fstd      = 'm', &
-           f_areal_mfstd_tilda  = 'm', &
-           f_dafsdani        = 'm', f_dafsdlatm       = 'm', &  
-           f_dafsdwave       = 'm', f_dafsdmrg        = 'm', &
-           f_dafsdlatg       = 'm', f_damfstdani      = 'm', &
-           f_damfstdlatm     = 'm', f_damfstdwave     = 'm', &
-           f_damfstdmrg      = 'm', f_damfstdlatg     = 'm', &
-           f_danani          = 'm', f_danlatm         = 'm', &  
-           f_danlatg         = 'm', &
-! LR
+           f_afsd            = 'm', f_afsdn      = 'm', &
+           f_dafsdnewi       = 'm', f_dafsdlatm  = 'm', &  
+           f_dafsdwave       = 'm', f_dafsdweld  = 'm', &
+           f_dafsdlatg       = 'm'                    , &
+           f_fbottom         = 'm', f_fside      = 'm', &
+           f_fsdrad          = 'm', f_fsdperim   = 'm', &
+           f_concforww       = 'm', f_diamforww  = 'm', &
+           f_thickforww      = 'm'                    , &
+           f_wavespectrum    = 'm', f_wave_sig_ht= 'm', &
            f_hi        = 'm', f_hs         = 'm', &
            f_snowfrac  = 'x', f_snowfracn  = 'x', &
            f_Tsfc      = 'm', f_aice       = 'm', &
@@ -382,31 +341,15 @@
            f_VGRDi    , f_VGRDs    , &
            f_VGRDb    , f_NFSD     , & ! LR
 !          f_example  , &
-! LR
-           f_wave_hs_ice,                               &
-           f_fbottom,           f_flateral,             &
-           f_vlateral,          f_gradial,              & 
-           f_leadarea,          f_latsurfarea ,         & 
-           f_concforww,         f_diamforww,            &
-           f_thickforww,                                &
-           f_wavespectrum,                              &
-           f_wave_hs,           f_wave_tz,              & 
-           f_nearest_wave_hs,                           &
-           f_nearest_wave_tz,                           &
-           f_wave_search_i,     f_wave_search_j,        &
-           f_ice_search_i,      f_ice_search_j,         &
-           f_cml_nfloes,        f_nfloes,               &
-           f_hm,                                        &
-           f_areal_fsd,         f_areal_fstd,           &
-           f_areal_mfstd_tilda,                         &
-           f_dafsdani,          f_dafsdlatm,            &
-           f_dafsdwave,         f_dafsdmrg,             &
-           f_dafsdlatg,         f_damfstdlatg,          &
-           f_damfstdani,        f_damfstdlatm,          &
-           f_damfstdwave,       f_damfstdmrg,           &
-           f_danani,            f_danlatm,              &
-           f_danlatg,              &
-! LR
+           f_afsd,         f_afsdn,        &
+           f_dafsdnewi,    f_dafsdlatm,    &
+           f_dafsdwave,    f_dafsdweld,    &
+           f_dafsdlatg,                    &
+           f_fsdperim,     f_fsdrad,       &
+           f_fbottom,      f_fside,        &
+           f_concforww,    f_diamforww,    &
+           f_thickforww,                   &
+           f_wavespectrum, f_wave_sig_ht,  &
            f_hi,        f_hs       , &
            f_snowfrac,  f_snowfracn, &
            f_Tsfc,      f_aice     , &
@@ -554,9 +497,7 @@
            n_VGRDi      = 2, &
            n_VGRDs      = 3, &
            n_VGRDb      = 4, &
-! LR
-           n_NFSD    = 5, &
-! LR
+           n_NFSD       = 5, &
 
            n_lont_bnds  = 1, &
            n_latt_bnds  = 2, &
@@ -565,24 +506,15 @@
 
       integer (kind=int_kind), dimension(max_nstrm), public :: &
 !          n_example    , &
-! LR    
-           n_fbottom            , n_flateral            , &
-           n_vlateral           , n_gradial             , & 
-           n_leadarea           , n_latsurfarea         , & 
-           n_concforww          , n_diamforww           , &
-           n_thickforww                                 , &
-           n_wavespectrum,                                &
-           n_wave_hs_ice        , n_hm                  , &
-           n_areal_fsd          , n_areal_fstd          , & 
-           n_areal_mfstd_tilda  , &
-           n_dafsdani           , n_dafsdlatm           , &
-           n_dafsdwave          , n_dafsdmrg            , &
-           n_dafsdlatg          , n_damfstdlatg         , &
-           n_damfstdani         , n_damfstdlatm         , &
-           n_damfstdwave        , n_damfstdmrg          , &
-           n_danani             , n_danlatm             , &
-           n_danlatg             , &
-! LR    
+           n_afsd          , n_afsdn          , & 
+           n_fsdperim      , n_fsdrad         , &
+           n_dafsdnewi     , n_dafsdlatm      , &
+           n_dafsdwave     , n_dafsdweld      , &
+           n_dafsdlatg                        , &
+           n_fbottom       , n_fside          , &
+           n_concforww     , n_diamforww      , &
+           n_thickforww                       , &
+           n_wavespectrum,   n_wave_sig_ht    , &
            n_hi         , n_hs         , &
            n_snowfrac,    n_snowfracn,   &
            n_Tsfc       , n_aice       , &
@@ -866,21 +798,17 @@
                num_avail_hist_fields_3Dz = num_avail_hist_fields_3Dz + 1
             elseif (vcoord(11:15) == 'VGRDb' .and. vcoord(17:20) == 'time') then
                num_avail_hist_fields_3Db = num_avail_hist_fields_3Db + 1
-! LR
             elseif (vcoord(11:14) == 'NFSD' .and. vcoord(16:19) == 'time') then
                num_avail_hist_fields_3Df = num_avail_hist_fields_3Df + 1
-! LR    
+               print *, 'define hist fields ',num_avail_hist_fields_3Df
             elseif (vcoord(11:15) == 'VGRDi' .and. vcoord(17:20) == 'NCAT') then
                num_avail_hist_fields_4Di = num_avail_hist_fields_4Di + 1
             elseif (vcoord(11:15) == 'VGRDs' .and. vcoord(17:20) == 'NCAT') then
                num_avail_hist_fields_4Ds = num_avail_hist_fields_4Ds + 1
             elseif (vcoord(11:15) == 'VGRDb' .and. vcoord(17:20) == 'NCAT') then
                num_avail_hist_fields_4Db = num_avail_hist_fields_4Db + 1
-! LR
-            elseif (vcoord(11:14) == 'NFSD' .and. vcoord(16:19) == 'NCAT') then
-               num_avail_hist_fields_4Df = num_avail_hist_fields_4Df + 1
             endif
-! LR
+
             if (num_avail_hist_fields_tot > max_avail_hist_fields) &
                call abort_ice("Need to increase max_avail_hist_fields")
 
@@ -889,15 +817,10 @@
                 num_avail_hist_fields_3Dc + &
                 num_avail_hist_fields_3Dz + &
                 num_avail_hist_fields_3Db + &
-! LR
                 num_avail_hist_fields_3Df + &
-! LR
                 num_avail_hist_fields_4Di + &
                 num_avail_hist_fields_4Ds + &
-                num_avail_hist_fields_4Db + &
-! LR
-                num_avail_hist_fields_4Df)   &  
-! LR
+                num_avail_hist_fields_4Db)  &
                call abort_ice("num_avail_hist_fields error")
 
             id(ns) = num_avail_hist_fields_tot
