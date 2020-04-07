@@ -121,21 +121,21 @@
        real (kind = dbl_kind) :: test
 
                                               
-       real (kind = dbl_kind), dimension(:), allocatable :: &
-           lims
+      real (kind=dbl_kind), dimension(:), allocatable :: &
+         lims
 
 
-        if (nfsd.eq.24) then
+      if (nfsd.eq.24) then
 
-            allocate(lims(24+1))
+         allocate(lims(24+1))
 
-            lims =   (/  6.65000000e-02,   5.31030847e+00,   1.42865861e+01,   2.90576686e+01, &
-                         5.24122136e+01,   8.78691405e+01,   1.39518470e+02,   2.11635752e+02, &
-                         3.08037274e+02,   4.31203059e+02,   5.81277225e+02,   7.55141047e+02, &
-                         9.45812834e+02,   1.34354446e+03,   1.82265364e+03,   2.47261361e+03, &
-                         3.35434988e+03,   4.55051413e+03,   6.17323164e+03,   8.37461170e+03, &
-                         1.13610059e+04,   1.54123510e+04,   2.09084095e+04,   2.83643675e+04, &
-                         3.84791270e+04 /)
+         lims = (/ 6.65000000e-02,   5.31030847e+00,   1.42865861e+01,   2.90576686e+01, &
+                   5.24122136e+01,   8.78691405e+01,   1.39518470e+02,   2.11635752e+02, &
+                   3.08037274e+02,   4.31203059e+02,   5.81277225e+02,   7.55141047e+02, &
+                   9.45812834e+02,   1.34354446e+03,   1.82265364e+03,   2.47261361e+03, &
+                   3.35434988e+03,   4.55051413e+03,   6.17323164e+03,   8.37461170e+03, &
+                   1.13610059e+04,   1.54123510e+04,   2.09084095e+04,   2.83643675e+04, &
+                   3.84791270e+04 /)
         
       elseif (nfsd.eq.16) then
 
@@ -174,7 +174,6 @@
         floe_area_c = 4.*floeshape*floe_rad_c**2.
         floe_area_h = 4.*floeshape*floe_rad_h**2.
 
-        floe_binwidth=(floe_rad_h-floe_rad_l)
 
         
         if (my_task == master_task) then
@@ -189,7 +188,9 @@
             write(*,*) floe_area_c
         end if
 
+      floe_binwidth = floe_rad_h - floe_rad_l
 
+      
       ! floe size categories that can combine during welding
       iweld(:,:) = -999
       do n = 1, nfsd
@@ -578,7 +579,7 @@
       real (kind=dbl_kind), intent(in) :: &
          dt         , & ! time step (s)
          ai0new     , & ! area of new ice added to cat 1
-         G_radial   , & ! lateral melt rate (m/s)
+         G_radial   , & ! lateral growth rate (m/s)
          wave_sig_ht    ! wave significant height (everywhere) (m)
 
       real (kind=dbl_kind), dimension(nfreq), intent(in)  :: &
@@ -609,7 +610,7 @@
          nsubt             ! number of subtimesteps
 
       real (kind=dbl_kind) :: &
-         elapsed_t, subdt  ! elapsed time, subtimestep (s)
+         tmp, elapsed_t, subdt  ! elapsed time, subtimestep (s)
 
       real (kind=dbl_kind), dimension (nfsd,ncat) :: &
          afsdn_latg     ! fsd after lateral growth
@@ -623,7 +624,14 @@
          f_flx          ! finite differences in floe size
 
       afsdn_latg(:,n) = afsdn(:,n)  ! default
-      trcrn(:,n) = afsdn(:,n)
+
+      ! LR NB this line differs
+      !trcrn(:,n) = afsdn(:,n)
+      ! remove
+      if (G_radial < c0) then
+          print *, 'newi Gr ',G_radial
+          stop 'neg Gr'
+      end if
 
       if (d_an_latg(n) > puny) then ! lateral growth
 
@@ -644,18 +652,31 @@
              do k = 1, nfsd
                 df_flx(k) = f_flx(k+1) - f_flx(k)
              end do
-
-!         if (abs(sum(df_flx)) > puny) print*,'fsd_add_new ERROR df_flx /= 0'
+            
+              ! remove
+             if (abs(sum(df_flx)) > puny) print*,'fsd_add_new ERROR df_flx /= 0'
 
              dafsd_tmp(:) = c0
+             tmp = SUM(afsdn_latg(:,n)/floe_rad_c(:))
              do k = 1, nfsd
-                dafsd_tmp(k) = (-df_flx(k) + c2 * G_radial * afsdn_latg(k,n) &
-                            * (c1/floe_rad_c(k) - SUM(afsdn_latg(:,n)/floe_rad_c(:))) )
+                dafsd_tmp(k) = -df_flx(k) + c2 * G_radial * afsdn_latg(k,n) &
+                            * (c1/floe_rad_c(k) - tmp )
 
              end do
 
             ! timestep required for this
             subdt = get_subdt_fsd(nfsd, afsdn_latg(:,n), dafsd_tmp(:)) 
+
+
+            ! remove
+            if (dafsd_tmp(nfsd).lt.c0) then
+                print *, 'dafsd_tmp(nfsd) ',dafsd_tmp(nfsd)
+                print *, 'subdt ',subdt
+                print *, 'afsdn_latg(:,n) ',afsdn_latg(:,n)
+                print *, 'dafsd_tmp(:)',dafsd_tmp(:)
+                print *, '----------'
+            end if
+
             subdt = MIN(subdt, dt)
  
             ! update fsd and elapsed time
@@ -674,7 +695,7 @@
 
          END DO
 
-         call icepack_cleanup_fsdn (afsdn_latg(:,n))
+         !call icepack_cleanup_fsdn (afsdn_latg(:,n))
          trcrn(:,n) = afsdn_latg(:,n)
 
       end if ! lat growth
@@ -743,6 +764,18 @@
                 + aicen(n)*trcrn(k,n) & ! after latg and newi
                 - area2(n)*afsdn_latg(k,n) ! after latg
       enddo    ! k
+
+      ! remove
+      if (d_afsd_latg(nfsd)<-puny) then
+           print *, 'factor ',(c1/floe_rad_c(nfsd) - tmp )
+           print *, 'afsdn_latg(:,n)',area2(n)*afsdn_latg(:,n)
+           print *, 'afsdn init ',aicen_init(n)*afsdn(:,n)
+           print *, 'nt, n ',nsubt, n
+           print *, 'df flx ',df_flx(nfsd)
+           print *, 'delta an ',area2(n)-aicen_init(n)
+           print *, 'delta fsd ', area2(n)*afsdn_latg(:,n)-aicen_init(n)*afsdn(:,n)
+           print *, '=======neg newi'
+      end if
 
 
       end subroutine fsd_add_new_ice
