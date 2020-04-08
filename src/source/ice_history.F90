@@ -1642,6 +1642,19 @@
       endif ! if (histfreq(ns1) /= 'x') then
       enddo
 
+      do ns1 = 1, nstreams
+      if (histfreq(ns1) /= 'x') then
+
+     ! Floe size distribution
+           call define_hist_field(n_afsdn,"afsdn","1",tstr4Df, tcstr, & 
+              "areal floe size and thickness distribution",    &
+              "per unit bin width",        &
+               c1, c0, ns1, f_afsdn)
+
+      end if
+      end do
+
+
        if (f_Tinz   (1:1) /= 'x') then
             if (allocated(Tinz4d)) deallocate(Tinz4d)
             allocate(Tinz4d(nx_block,ny_block,nzilyr,ncat_hist))
@@ -1749,6 +1762,9 @@
       if (allocated(a4Db)) deallocate(a4Db)
       if (num_avail_hist_fields_4Db > 0) &
       allocate(a4Db(nx_block,ny_block,nzblyr,ncat_hist,num_avail_hist_fields_4Db,max_blocks))
+      if (allocated(a4Df)) deallocate(a4Df) 
+      if (num_avail_hist_fields_4Df > 0) &
+      allocate(a4Df(nx_block,ny_block,nfsd_hist,ncat_hist,num_avail_hist_fields_4Df,max_blocks))
 
       if (allocated(a2D))  a2D (:,:,:,:)     = c0
       if (allocated(a3Dc)) a3Dc(:,:,:,:,:)   = c0
@@ -1758,6 +1774,7 @@
       if (allocated(a4Di)) a4Di(:,:,:,:,:,:) = c0
       if (allocated(a4Ds)) a4Ds(:,:,:,:,:,:) = c0
       if (allocated(a4Db)) a4Db(:,:,:,:,:,:) = c0
+      if (allocated(a4Df)) a4Df(:,:,:,:,:,:) = c0
       avgct(:) = c0
       albcnt(:,:,:,:) = c0
 
@@ -1863,6 +1880,9 @@
       real (kind=dbl_kind), dimension (nx_block,ny_block,ncat_hist) :: &
          worka3, ravgipn
 
+      real (kind=dbl_kind), dimension(nx_block,ny_block,nfsd_hist,ncat_hist) :: &
+         workd
+
       real (kind=dbl_kind), dimension(nx_block,ny_block,nfsd_hist) :: &
          worke
 
@@ -1882,6 +1902,7 @@
       n4Dicum = n3Dfcum + num_avail_hist_fields_4Di  ! LR
       n4Dscum = n4Dicum + num_avail_hist_fields_4Ds 
       n4Dbcum = n4Dscum + num_avail_hist_fields_4Db ! should equal num_avail_hist_fields_tot
+      n4Dfcum = n4Dbcum + num_avail_hist_fields_4Df 
 
       do ns = 1,nstreams
          if (.not. hist_avg .or. histfreq(ns) == '1') then  ! write snapshots
@@ -1924,6 +1945,12 @@
               if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) &
                   a4Db(:,:,:,:,nn,:) = c0
            enddo
+            do n = n4Dbcum + 1, n4Dfcum ! LR
+              nn = n - n4Dbcum
+              if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) &
+                  a4Df(:,:,:,:,nn,:) = c0
+           enddo
+
            avgct(ns) = c1
          else                      ! write averages over time histfreq
            avgct(ns) = avgct(ns) + c1
@@ -1941,7 +1968,7 @@
 
       !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block, &
       !$OMP k,n,qn,ns,hs,rho_ocn,rho_ice,Tice,Sbr,phi,rhob,dfresh,dfsalt,&
-      !$OMP worka,workb,Tinz4d,Sinz4d,Tsnz4d,worka3)
+      !$OMP worka,workb,Tinz4d,Sinz4d,Tsnz4d,worka3,workd,worke)
       do iblk = 1, nblocks
          this_block = get_block(blocks_ice(iblk),iblk)         
          ilo = this_block%ilo
@@ -3218,7 +3245,27 @@
             call accum_hist_field(n_Tsnz-n4Dicum, iblk, nzslyr, ncat_hist, &
                                   Tsnz4d(:,:,1:nzslyr,1:ncat_hist), a4Ds)
          endif
-         
+ 
+
+        if (f_afsdn     (1:1) /= 'x') then
+
+          workd(:,:,:,:) = c0
+          do j = jlo, jhi
+          do i = ilo, ihi
+          do n = 1, ncat_hist
+          do k = 1, nfsd_hist 
+                workd(i,j,k,n) = trcrn(i,j,nt_fsd+k-1,n,iblk) * &
+                                 aicen_init(i,j,n,iblk) / floe_binwidth(k)
+     
+          end do
+          end do
+          end do
+          end do
+          call accum_hist_field(n_afsdn-n4Dbcum, iblk, nfsd_hist, ncat_hist, &
+                                  workd, a4Df)
+        end if
+
+        
         ! Calculate aggregate surface melt flux by summing category values
         if (f_fmeltt_ai(1:1) /= 'x') then
          do ns = 1, nstreams
@@ -4035,6 +4082,26 @@
               enddo             ! k
               endif
            enddo                ! n
+           do n = 1, num_avail_hist_fields_4Df
+              nn = n4Dbcum + n
+              if (avail_hist_fields(nn)%vhistfreq == histfreq(ns)) then 
+              do k = 1, nfsd_hist
+              do ic = 1, ncat_hist
+              do j = jlo, jhi
+              do i = ilo, ihi
+                 if (.not. tmask(i,j,iblk)) then ! mask out land points
+                    a4Df(i,j,k,ic,n,iblk) = spval_dbl
+                 else                            ! convert units
+                    a4Df(i,j,k,ic,n,iblk) = avail_hist_fields(nn)%cona*a4Df(i,j,k,ic,n,iblk) &
+                                   * ravgct + avail_hist_fields(nn)%conb
+                 endif
+              enddo             ! i
+              enddo             ! j
+              enddo             ! ic
+              enddo             ! k
+              endif
+           enddo                ! n
+
 
       !---------------------------------------------------------------
       ! snapshots
@@ -4171,6 +4238,7 @@
            if (allocated(a4Di)) a4Di(:,:,:,:,:,:) = c0
            if (allocated(a4Ds)) a4Ds(:,:,:,:,:,:) = c0
            if (allocated(a4Db)) a4Db(:,:,:,:,:,:) = c0
+           if (allocated(a4Df)) a4Df(:,:,:,:,:,:) = c0
            avgct(:) = c0
            albcnt(:,:,:,:) = c0
            write_ic = .false.        ! write initial condition once at most
@@ -4211,6 +4279,11 @@
            nn = n - n4Dscum
            if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) a4Db(:,:,:,:,nn,:) = c0
         enddo
+        do n = n4Dbcum + 1, n4Dfcum
+           nn = n - n4Dbcum
+           if (avail_hist_fields(n)%vhistfreq == histfreq(ns)) a4Df(:,:,:,:,nn,:) = c0
+        enddo
+
 
       endif  ! write_history or write_ic
       enddo  ! nstreams

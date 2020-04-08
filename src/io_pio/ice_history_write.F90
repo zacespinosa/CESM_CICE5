@@ -91,8 +91,8 @@
 
       type(file_desc_t)     :: File
       type(io_desc_t)       :: iodesc2d, &
-                               iodesc3dc, iodesc3dv, iodesc3di, iodesc3db, iodesc3df, &
-                               iodesc4di, iodesc4ds
+                               iodesc3dc, iodesc3dv, iodesc3di, iodesc3db, iodesc3df, &  ! LR
+                               iodesc4di, iodesc4ds, iodesc4df, iodesc4db ! CMB
       type(var_desc_t)      :: varid
 
       ! 4 coordinate variables: TLON, TLAT, ULON, ULAT
@@ -162,14 +162,17 @@
       call ice_pio_init(mode='write', filename=trim(filename), File=File, &
 	clobber=.true.)
 
-      call ice_pio_initdecomp(iodesc=iodesc2d, ice_precision=history_precision)
-      call ice_pio_initdecomp(ndim3=ncat_hist, iodesc=iodesc3dc, ice_precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nzilyr,     iodesc=iodesc3di, ice_precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nzlyrb,    iodesc=iodesc3db, ice_precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nverts, inner_dim=.true., iodesc=iodesc3dv, ice_precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nfsd_hist,  iodesc=iodesc3df, ice_precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nzilyr,  ndim4=ncat_hist,  iodesc=iodesc4di, ice_precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nzslyr,  ndim4=ncat_hist,  iodesc=iodesc4ds, ice_precision=history_precision)
+      call ice_pio_initdecomp(iodesc=iodesc2d)
+      call ice_pio_initdecomp(ndim3=ncat_hist, iodesc=iodesc3dc)
+      call ice_pio_initdecomp(ndim3=nzilyr,     iodesc=iodesc3di)  ! a3Dz
+      call ice_pio_initdecomp(ndim3=nzlyrb,    iodesc=iodesc3db)
+      call ice_pio_initdecomp(ndim3=nfsd_hist, iodesc=iodesc3df)
+      call ice_pio_initdecomp(ndim3=nverts, inner_dim=.true., iodesc=iodesc3dv)
+      call ice_pio_initdecomp(ndim3=nzilyr,  ndim4=ncat_hist,  iodesc=iodesc4di)
+      call ice_pio_initdecomp(ndim3=nzslyr,  ndim4=ncat_hist,  iodesc=iodesc4ds)
+      call ice_pio_initdecomp(ndim3=nzblyr,  ndim4=ncat_hist,  iodesc=iodesc4db)
+      call ice_pio_initdecomp(ndim3=nfsd_hist,  ndim4=ncat_hist,  iodesc=iodesc4df)
+
 
 !      ltime = time/int(secday)
       ltime = real(time/int(secday),kind=real_kind)
@@ -771,6 +774,51 @@
           endif
         enddo  ! num_avail_hist_fields_4Db
 
+!!LR 
+      !-----------------------------------------------------------------
+      ! 4D (ice categories and floe size categories)
+      !-----------------------------------------------------------------
+
+        dimidcz(1) = imtid
+        dimidcz(2) = jmtid
+        dimidcz(3) = kmtidf
+        dimidcz(4) = cmtid
+        dimidcz(5) = timid
+
+        do n = n4Dbcum + 1, n4Dfcum
+          if (avail_hist_fields(n)%vhistfreq == histfreq(ns) .or. write_ic) then
+            status  = pio_def_var(File, trim(avail_hist_fields(n)%vname), &
+                          history_precision, dimidcz, varid)
+            status = pio_put_att(File,varid,'units', &
+                        trim(avail_hist_fields(n)%vunit))
+            status = pio_put_att(File,varid, 'long_name', &
+                        trim(avail_hist_fields(n)%vdesc))
+            status = pio_put_att(File,varid,'coordinates', &
+                        trim(avail_hist_fields(n)%vcoord))
+            status = pio_put_att(File,varid,'cell_measures', &
+                        trim(avail_hist_fields(n)%vcellmeas))
+            if (history_precision == pio_real) then
+               status = pio_put_att(File, varid, 'missing_value', spval)
+               status = pio_put_att(File, varid,'_FillValue',spval)
+            else
+               status = pio_put_att(File, varid, 'missing_value', spval_dbl)
+               status = pio_put_att(File, varid,'_FillValue',spval_dbl)
+            endif
+ 
+            ! Add cell_methods attribute to variables if averaged
+            if (hist_avg .and. histfreq(ns) /= '1') then
+                status = pio_put_att(File,varid,'cell_methods','time: mean')
+            endif
+
+            if (histfreq(ns) == '1' .or. .not. hist_avg) then
+               status = pio_put_att(File,varid,'time_rep','instantaneous')
+            else
+               status = pio_put_att(File,varid,'time_rep','averaged')
+            endif
+          endif
+        enddo  ! num_avail_hist_fields_4Df
+!!LR 
+
       !-----------------------------------------------------------------
       ! global attributes
       !-----------------------------------------------------------------
@@ -808,7 +856,8 @@
         if (use_leap_years) then
           write(title,'(a,i3,a)') 'This year has ',int(dayyr),' days'
         else
-          write(title,'(a,i3,a)') 'All years have exactly ',int(dayyr),' days'
+          write(title,'(a,i3,a)') &
+            'All years have exactly ',int(dayyr),' days'
         endif
         status = pio_put_att(File,pio_global,'comment',trim(title))
 
@@ -1385,6 +1434,102 @@
       enddo ! num_avail_hist_fields_4Ds
       if (history_precision == pio_real) then
          deallocate(rworkr4)
+         allocate(rworkr4(nx_block,ny_block,nblocks,ncat_hist,nzblyr))
+      else
+         deallocate(workr4)
+         allocate(workr4(nx_block,ny_block,nblocks,ncat_hist,nzblyr))
+      endif
+      ! 4D (categories, bio)
+      do n = n4Dscum+1, n4Dbcum
+         nn = n - n4Dscum
+         if (avail_hist_fields(n)%vhistfreq == histfreq(ns) .or. write_ic) then
+            status  = pio_inq_varid(File,avail_hist_fields(n)%vname,varid)
+            if (status /= pio_noerr) call abort_ice( &
+               'ice: Error getting varid for '//avail_hist_fields(n)%vname)
+            call pio_setframe(File, varid, int(1,kind=PIO_OFFSET_KIND))
+
+            if (history_precision == pio_real) then
+               rworkr4 = spval
+               do iblk = 1, nblocks
+                  do i = 1, ncat_hist
+                     do k = 1, nzblyr
+                        do j=1,ny_block
+                           do ii=1,nx_block
+                              if( a4Db(ii,j,k,i,nn,iblk) .ne. spval_dbl) then
+                                 rworkr4(ii,j,iblk,i,k) = &
+                                      real(a4Db(ii,j,k,i,nn,iblk),kind=real_kind)
+                              endif
+                           enddo ! ii
+                        enddo ! j
+                     enddo ! k
+                  enddo ! i
+               enddo ! iblk
+               call pio_write_darray(File, varid, iodesc4db,&
+                    rworkr4, status, fillval=spval)
+            else
+               do j = 1, nblocks
+                  do i = 1, ncat_hist
+                     do k = 1, nzblyr
+                        workr4(:,:,j,i,k) = a4Db(:,:,k,i,nn,j)
+                     enddo ! k
+                  enddo ! i
+               enddo ! iblk
+               call pio_write_darray(File, varid, iodesc4db,&
+                    workr4, status, fillval=spval_dbl)
+            endif
+         endif
+      enddo ! num_avail_hist_fields_4Db
+      if (history_precision == pio_real) then
+         deallocate(rworkr4)
+         allocate(rworkr4(nx_block,ny_block,nblocks,ncat_hist,nfsd_hist))
+      else
+         deallocate(workr4)
+         allocate(workr4(nx_block,ny_block,nblocks,ncat_hist,nfsd_hist))
+      endif
+      ! 4D (categories, floe size)
+      do n = n4Dbcum+1, n4Dfcum
+         nn = n - n4Dbcum
+         if (avail_hist_fields(n)%vhistfreq == histfreq(ns) .or. write_ic) then
+            status  = pio_inq_varid(File,avail_hist_fields(n)%vname,varid)
+            if (status /= pio_noerr) call abort_ice( &
+               'ice: Error getting varid for '//avail_hist_fields(n)%vname)
+            call pio_setframe(File, varid, int(1,kind=PIO_OFFSET_KIND))
+
+            if (history_precision == pio_real) then
+               rworkr4 = spval
+               do iblk = 1, nblocks
+                  do i = 1, ncat_hist
+                     do k = 1, nfsd_hist
+                        do j=1,ny_block
+                           do ii=1,nx_block
+                              if( a4Df(ii,j,k,i,nn,iblk) .ne. spval_dbl) then
+                                 rworkr4(ii,j,iblk,i,k) = &
+                                      real(a4Df(ii,j,k,i,nn,iblk),kind=real_kind)
+                              endif
+                           enddo ! ii
+                        enddo ! j
+                     enddo ! k
+                  enddo ! i
+               enddo ! iblk
+               call pio_write_darray(File, varid, iodesc4df,&
+                    rworkr4, status, fillval=spval)
+            else
+               do j = 1, nblocks
+                  do i = 1, ncat_hist
+                     do k = 1, nfsd_hist
+                        workr4(:,:,j,i,k) = a4Df(:,:,k,i,nn,j)
+                     enddo ! k
+                  enddo ! i
+               enddo ! iblk
+               call pio_write_darray(File, varid, iodesc4df,&
+                    workr4, status, fillval=spval_dbl)
+            endif
+         endif
+
+      print *, 'MAX ',MAXVAL(rworkr4),MAXVAL(a4Df)
+      enddo ! num_avail_hist_fields_4Df
+      if (history_precision == pio_real) then
+         deallocate(rworkr4)
       else
          deallocate(workr4)
       endif
@@ -1408,8 +1553,11 @@
       call pio_freedecomp(ice_pio_subsystem, iodesc3dc)
       call pio_freedecomp(ice_pio_subsystem, iodesc3di)
       call pio_freedecomp(ice_pio_subsystem, iodesc3db)
+      !call pio_freedecomp(ice_pio_subsystem, iodesc3df) ! CMB
       call pio_freedecomp(ice_pio_subsystem, iodesc4di)
       call pio_freedecomp(ice_pio_subsystem, iodesc4ds)
+      !call pio_freedecomp(ice_pio_subsystem, iodesc4db) ! CMB
+      !call pio_freedecomp(ice_pio_subsystem, iodesc4df) ! CMB
 
 #endif
 

@@ -88,7 +88,8 @@
          num_avail_hist_fields_3Df  = 0, & ! Number of 3D fields (fsd)
          num_avail_hist_fields_4Di  = 0, & ! Number of 4D fields (categories,vertical), ice
          num_avail_hist_fields_4Ds  = 0, & ! Number of 4D fields (categories,vertical), snow
-         num_avail_hist_fields_4Db  = 0    ! Number of 4D fields (categories,vertical), ice-biology
+         num_avail_hist_fields_4Db  = 0, & ! Number of 4D fields (categories,vertical), ice-biology
+         num_avail_hist_fields_4Df  = 0    ! Number of 4D fields (categories,fsd), fsd 
 
       integer (kind=int_kind), public :: &        ! cumulative counts
          n2D     , & ! num_avail_hist_fields_2D
@@ -99,6 +100,7 @@
          n4Dicum , & ! n3Dfcum + num_avail_hist_fields_4Di
          n4Dscum , & ! n4Dicum + num_avail_hist_fields_4Ds
          n4Dbcum , & ! n4Dscum + num_avail_hist_fields_4Db
+         n4Dfcum , & ! n4Dbcum + num_avail_hist_fields_4Df
          nzlyr   , & ! vertical dimension (temp variable)
          nzlyrb      ! vertical dimension of biology grid (temp variable)
 
@@ -131,7 +133,8 @@
          a3Df(:,:,:,:,:)  , & ! field accumulations/averages, 3D categories (fsd) 
          a4Di(:,:,:,:,:,:), & ! field accumulations/averages, 4D categories,vertical, ice
          a4Ds(:,:,:,:,:,:), & ! field accumulations/averages, 4D categories,vertical, snow
-         a4Db(:,:,:,:,:,:)    ! field accumulations/averages, 4D categories,vertical, bio
+         a4Db(:,:,:,:,:,:), & ! field accumulations/averages, 4D categories,vertical, bio
+         a4Df(:,:,:,:,:,:)    ! field accumulations/averages, 4D categories,vertical, fsd
 
       real (kind=dbl_kind), allocatable, public :: &
          Tinz4d (:,:,:,:)    , & ! array for Tin
@@ -166,9 +169,11 @@
          tstr4Ds = 'TLON TLAT VGRDs NCAT', & ! vcoord for T cell, 4D, snow
          ustr4Ds = 'ULON ULAT VGRDs NCAT', & ! vcoord for U cell, 4D, snow
          tstr4Db = 'TLON TLAT VGRDb NCAT', & ! vcoord for T cell, 4D, bio
-         ustr4Db = 'ULON ULAT VGRDb NCAT'    ! vcoord for U cell, 4D, bio
+         ustr4Db = 'ULON ULAT VGRDb NCAT', & ! vcoord for U cell, 4D, bio
 !ferret
-!         tstr4Di  = 'TLON TLAT VGRDi NCAT time', & ! ferret can not handle time
+         tstr4Df = 'TLON TLAT NFSD NCAT', & ! vcoord for T cell, 4D, fsd
+         ustr4Df = 'ULON ULAT NFSD NCAT'    ! vcoord for U cell, 4D, fsd
+!         tstr4Di  = 'TLON TLAT VGRDi NCAT time', & ! ferret can not handle time 
 !         ustr4Di  = 'ULON ULAT VGRDi NCAT time', & ! index on 4D variables.
 !         tstr4Ds  = 'TLON TLAT VGRDs NCAT time', & ! Use 'ferret' lines instead
 !         ustr4Ds  = 'ULON ULAT VGRDs NCAT time', & ! (below also)
@@ -806,6 +811,8 @@
                num_avail_hist_fields_4Ds = num_avail_hist_fields_4Ds + 1
             elseif (vcoord(11:15) == 'VGRDb' .and. vcoord(17:20) == 'NCAT') then
                num_avail_hist_fields_4Db = num_avail_hist_fields_4Db + 1
+            elseif (vcoord(11:14) == 'NFSD' .and. vcoord(16:19) == 'NCAT') then
+               num_avail_hist_fields_4Df = num_avail_hist_fields_4Df + 1
             endif
 
             if (num_avail_hist_fields_tot > max_avail_hist_fields) &
@@ -819,7 +826,8 @@
                 num_avail_hist_fields_3Df + &
                 num_avail_hist_fields_4Di + &
                 num_avail_hist_fields_4Ds + &
-                num_avail_hist_fields_4Db)  &
+                num_avail_hist_fields_4Db + &
+                num_avail_hist_fields_4Df)   &  
                call abort_ice("num_avail_hist_fields error")
 
             id(ns) = num_avail_hist_fields_tot

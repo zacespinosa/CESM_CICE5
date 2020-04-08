@@ -2176,7 +2176,6 @@
          if (tr_fsd) & ! evolve the floe size distribution
             ! both new frazil ice and lateral growth
 
-            call icepack_cleanup_fsd (afsdn(i,j,:,:))
             call fsd_add_new_ice (n,                         & ! in
                                   dt,         ai0new(ij),    & ! in
                                   d_an_latg(i,j,:),          & ! in

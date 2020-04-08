@@ -2349,6 +2349,18 @@
     </values>
   </entry>
 
+  <entry id="f_afsdn">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+
 
   <entry id="f_dafsdweld">
     <type>char</type>

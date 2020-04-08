@@ -625,14 +625,6 @@
 
       afsdn_latg(:,n) = afsdn(:,n)  ! default
 
-      ! LR NB this line differs
-      !trcrn(:,n) = afsdn(:,n)
-      ! remove
-      if (G_radial < c0) then
-          print *, 'newi Gr ',G_radial
-          stop 'neg Gr'
-      end if
-
       if (d_an_latg(n) > puny) then ! lateral growth
 
          ! adaptive timestep
@@ -652,9 +644,8 @@
              do k = 1, nfsd
                 df_flx(k) = f_flx(k+1) - f_flx(k)
              end do
-            
-              ! remove
-             if (abs(sum(df_flx)) > puny) print*,'fsd_add_new ERROR df_flx /= 0'
+
+!         if (abs(sum(df_flx)) > puny) print*,'fsd_add_new ERROR df_flx /= 0'
 
              dafsd_tmp(:) = c0
              tmp = SUM(afsdn_latg(:,n)/floe_rad_c(:))
@@ -664,19 +655,11 @@
 
              end do
 
+             ! LR new
+             WHERE(ABS(dafsd_tmp).lt.puny) dafsd_tmp = c0
+
             ! timestep required for this
             subdt = get_subdt_fsd(nfsd, afsdn_latg(:,n), dafsd_tmp(:)) 
-
-
-            ! remove
-            if (dafsd_tmp(nfsd).lt.c0) then
-                print *, 'dafsd_tmp(nfsd) ',dafsd_tmp(nfsd)
-                print *, 'subdt ',subdt
-                print *, 'afsdn_latg(:,n) ',afsdn_latg(:,n)
-                print *, 'dafsd_tmp(:)',dafsd_tmp(:)
-                print *, '----------'
-            end if
-
             subdt = MIN(subdt, dt)
  
             ! update fsd and elapsed time
@@ -684,7 +667,7 @@
             elapsed_t = elapsed_t + subdt
 
             ! remove
-            if (nsubt.gt.100) then
+            if (nsubt.gt.50) then
               print *, 'latg not converging'
               print *, 'before ',afsdn_latg(:,n) - subdt*dafsd_tmp(:)
               print *, 'after ',afsdn_latg(:,n)
@@ -695,7 +678,7 @@
 
          END DO
 
-         !call icepack_cleanup_fsdn (afsdn_latg(:,n))
+         call icepack_cleanup_fsdn (afsdn_latg(:,n))
          trcrn(:,n) = afsdn_latg(:,n)
 
       end if ! lat growth
@@ -764,18 +747,6 @@
                 + aicen(n)*trcrn(k,n) & ! after latg and newi
                 - area2(n)*afsdn_latg(k,n) ! after latg
       enddo    ! k
-
-      ! remove
-      if (d_afsd_latg(nfsd)<-puny) then
-           print *, 'factor ',(c1/floe_rad_c(nfsd) - tmp )
-           print *, 'afsdn_latg(:,n)',area2(n)*afsdn_latg(:,n)
-           print *, 'afsdn init ',aicen_init(n)*afsdn(:,n)
-           print *, 'nt, n ',nsubt, n
-           print *, 'df flx ',df_flx(nfsd)
-           print *, 'delta an ',area2(n)-aicen_init(n)
-           print *, 'delta fsd ', area2(n)*afsdn_latg(:,n)-aicen_init(n)*afsdn(:,n)
-           print *, '=======neg newi'
-      end if
 
 
       end subroutine fsd_add_new_ice
