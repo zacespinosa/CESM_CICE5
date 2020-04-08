@@ -162,16 +162,17 @@
       call ice_pio_init(mode='write', filename=trim(filename), File=File, &
 	clobber=.true.)
 
-      call ice_pio_initdecomp(iodesc=iodesc2d)
-      call ice_pio_initdecomp(ndim3=ncat_hist, iodesc=iodesc3dc)
-      call ice_pio_initdecomp(ndim3=nzilyr,     iodesc=iodesc3di)  ! a3Dz
-      call ice_pio_initdecomp(ndim3=nzlyrb,    iodesc=iodesc3db)
-      call ice_pio_initdecomp(ndim3=nfsd_hist, iodesc=iodesc3df)
-      call ice_pio_initdecomp(ndim3=nverts, inner_dim=.true., iodesc=iodesc3dv)
-      call ice_pio_initdecomp(ndim3=nzilyr,  ndim4=ncat_hist,  iodesc=iodesc4di)
-      call ice_pio_initdecomp(ndim3=nzslyr,  ndim4=ncat_hist,  iodesc=iodesc4ds)
-      call ice_pio_initdecomp(ndim3=nzblyr,  ndim4=ncat_hist,  iodesc=iodesc4db)
-      call ice_pio_initdecomp(ndim3=nfsd_hist,  ndim4=ncat_hist,  iodesc=iodesc4df)
+      call ice_pio_initdecomp(iodesc=iodesc2d, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=ncat_hist, iodesc=iodesc3dc, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=nzilyr,     iodesc=iodesc3di, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=nzlyrb,    iodesc=iodesc3db, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=nverts, inner_dim=.true., iodesc=iodesc3dv, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=nfsd_hist,  iodesc=iodesc3df, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=nzilyr,  ndim4=ncat_hist,  iodesc=iodesc4di, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=nzslyr,  ndim4=ncat_hist,  iodesc=iodesc4ds, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=nzblyr,  ndim4=ncat_hist,  iodesc=iodesc4db, ice_precision=history_precision)
+      call ice_pio_initdecomp(ndim3=nfsd_hist,  ndim4=ncat_hist,  iodesc=iodesc4df, ice_precision=history_precision)
+
 
 
 !      ltime = time/int(secday)
@@ -1525,8 +1526,6 @@
                     workr4, status, fillval=spval_dbl)
             endif
          endif
-
-      print *, 'MAX ',MAXVAL(rworkr4),MAXVAL(a4Df)
       enddo ! num_avail_hist_fields_4Df
       if (history_precision == pio_real) then
          deallocate(rworkr4)
@@ -1553,11 +1552,11 @@
       call pio_freedecomp(ice_pio_subsystem, iodesc3dc)
       call pio_freedecomp(ice_pio_subsystem, iodesc3di)
       call pio_freedecomp(ice_pio_subsystem, iodesc3db)
-      !call pio_freedecomp(ice_pio_subsystem, iodesc3df) ! CMB
+      call pio_freedecomp(ice_pio_subsystem, iodesc3df) ! CMB
       call pio_freedecomp(ice_pio_subsystem, iodesc4di)
       call pio_freedecomp(ice_pio_subsystem, iodesc4ds)
-      !call pio_freedecomp(ice_pio_subsystem, iodesc4db) ! CMB
-      !call pio_freedecomp(ice_pio_subsystem, iodesc4df) ! CMB
+      call pio_freedecomp(ice_pio_subsystem, iodesc4db) ! CMB
+      call pio_freedecomp(ice_pio_subsystem, iodesc4df) ! CMB
 
 #endif
 
