@@ -174,6 +174,8 @@
         floe_area_c = 4.*floeshape*floe_rad_c**2.
         floe_area_h = 4.*floeshape*floe_rad_h**2.
 
+        floe_binwidth = floe_rad_h - floe_rad_l
+
 
         
         if (my_task == master_task) then
@@ -187,8 +189,6 @@
             write(*,*) floe_area_h   
             write(*,*) floe_area_c
         end if
-
-      floe_binwidth = floe_rad_h - floe_rad_l
 
       
       ! floe size categories that can combine during welding
@@ -623,7 +623,9 @@
       real (kind=dbl_kind), dimension(nfsd+1) :: &
          f_flx          ! finite differences in floe size
 
+      ! everything is the same if left unchanged
       afsdn_latg(:,n) = afsdn(:,n)  ! default
+      trcrn(:,n) = afsdn(:,n)
 
       if (d_an_latg(n) > puny) then ! lateral growth
 
@@ -645,7 +647,6 @@
                 df_flx(k) = f_flx(k+1) - f_flx(k)
              end do
 
-!         if (abs(sum(df_flx)) > puny) print*,'fsd_add_new ERROR df_flx /= 0'
 
              dafsd_tmp(:) = c0
              tmp = SUM(afsdn_latg(:,n)/floe_rad_c(:))
@@ -714,6 +715,7 @@
                   do k = 2, nfsd  ! diminish other floe cats accordingly
                      afsd_ni(k) = afsdn_latg(k,n)*area2(n) / (area2(n)+ai0new)
                   enddo
+
                end if ! wave spec
 
             else ! no fsd, so entirely new ice
@@ -735,6 +737,7 @@
             call icepack_cleanup_fsdn (trcrn(:,n))
 
         endif ! d_an_newi > puny
+
       endif    ! n = 1
 
       ! history/diagnostics
@@ -743,11 +746,9 @@
          d_afsd_latg(k) = d_afsd_latg(k) &
                 + area2(n)*afsdn_latg(k,n) & ! after latg
                 - aicen_init(n)*afsdn(k,n) ! at start
-         d_afsd_newi(k) = d_afsd_newi(k) &
-                + aicen(n)*trcrn(k,n) & ! after latg and newi
+         if (n.eq.1) d_afsd_newi(k) = aicen(n)*trcrn(k,n) & ! after latg and newi
                 - area2(n)*afsdn_latg(k,n) ! after latg
       enddo    ! k
-
 
       end subroutine fsd_add_new_ice
 
@@ -906,7 +907,7 @@
          aminweld = p1  ! minimum ice concentration likely to weld
 
       real (kind=dbl_kind), parameter :: &
-         c_weld = 1.0e-8_dbl_kind     
+         c_weld = 1.0e-7_dbl_kind    ! LR remove was -8 
                         ! constant of proportionality for welding
                         ! total number of floes that weld with another, per square meter,
                         ! per unit time, in the case of a fully covered ice surface
@@ -986,7 +987,6 @@
                end do
                end do
 
-
                ! update afsd   
                afsd_tmp(:) = afsd_tmp(:) + subdt*(gain(:) - loss(:))
 
@@ -1012,6 +1012,7 @@
                ! history/diagnostics
                d_afsdn_weld(k,n) = afsdn(k,n) - afsd_init(k)
             enddo
+ 
          endif ! try to weld
       enddo    ! ncat
 
@@ -1022,6 +1023,7 @@
             d_afsd_weld(k) = d_afsd_weld(k) + aicen(n)*d_afsdn_weld(k,n)
          end do ! n
       end do    ! k
+
 
       end subroutine floe_weld_thermo
 

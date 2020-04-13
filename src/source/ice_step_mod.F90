@@ -287,7 +287,7 @@
          l_stop          ! if true, abort the model
 
       integer (kind=int_kind) :: &
-         istop, jstop    ! indices of grid cell where model aborts 
+         istop, jstop, k ! indices of grid cell where model aborts 
 
       real (kind=dbl_kind), dimension (nx_block,ny_block) :: &
          worka, workb
@@ -350,7 +350,6 @@
       !  call to coupler.
       ! Compute lateral and bottom heat fluxes.
       !-----------------------------------------------------------------
-
 
         ! calculate heat fluxes (does not change ice)
         call frzmlt_bottom_lateral                  &
@@ -421,6 +420,9 @@
                   icells = icells + 1
                   indxi(icells) = i
                   indxj(icells) = j
+               ! LR may remove
+               else
+                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk) = c0
                endif
             enddo               ! i
             enddo               ! j

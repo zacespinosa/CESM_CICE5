@@ -1932,7 +1932,6 @@
                                   afsdn(i,j,:,:),                  &
                                   G_radial(i,j), d_an_latg(i,j,:), &
                                   tot_latg )
-
          
 
          ai0mod = aice0(i,j)
@@ -1969,6 +1968,7 @@
          d_an_newi(i,j,1)     = ai0new(ij)
          d_an_tot(i,j,2:ncat) = d_an_latg(i,j,2:ncat)
          d_an_tot(i,j,1)      = d_an_latg(i,j,1) + d_an_newi(i,j,1)
+
          if (tr_fsd) then
             vin0new(ij,1)    = vin0new(ij,1) + ai0new(ij)*hi0new ! not BFB
          else
@@ -2155,7 +2155,8 @@
 
          area1        = aicen(i,j,n)   ! save
          vice1(ij)    = vicen(i,j,n)   ! save
-         area2(n)        = aicen_init(i,j,n) + d_an_latg(i,j,n) ! save area after latg, before newi
+         area2(n)     = aicen_init(i,j,n) + d_an_latg(i,j,n) ! save area after latg, before newi
+
          aicen(i,j,n) = aicen(i,j,n) + d_an_tot(i,j,n) ! after lateral growth and new ice growth
 
          aice0(i,j)   = aice0(i,j)   - d_an_tot(i,j,n)
@@ -2177,7 +2178,7 @@
             ! both new frazil ice and lateral growth
 
             call fsd_add_new_ice (n,                         & ! in
-                                  dt,         ai0new(ij),    & ! in
+                                  dt,         d_an_newi(i,j,1), & ! in
                                   d_an_latg(i,j,:),          & ! in
                                   d_an_newi(i,j,:),          & ! in
                                   G_radial(i,j),   area2(:), & ! in

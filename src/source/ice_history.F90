@@ -171,13 +171,14 @@
         f_wave_sig_ht = 'x'
     end if 
 
-      if (.NOT.wave_spec) then
-        f_concforww = 'x'
-        f_diamforww = 'x'
-        f_wavespectrum='x'
-        !f_wave_sig_ht = 'x'
-        f_thickforww = 'x'        
-      end if   
+    ! LR remove comment
+     ! if (.NOT.wave_spec) then
+     !   f_concforww = 'x'
+     !   f_diamforww = 'x'
+     !   f_wavespectrum='x'
+     !   !f_wave_sig_ht = 'x'
+     !   f_thickforww = 'x'        
+     ! end if   
 ! LR 
       if (kdyn /= 2) then
            f_a11       = 'x'
@@ -1997,7 +1998,7 @@
                 worka(i,j) = c0
                 do n = 1, ncat_hist
                 do k = 1, nfsd_hist
-                    worka(i,j) = worka(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                    worka(i,j) = worka(i,j) + aicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
                 end do
                 end do
              end do
@@ -2017,14 +2018,16 @@
                     ! normalization factor
 !                    workb(i,j) = workb(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)/floe_area_c(k)
                     ! area-mean radius, following Eqn. 26 in RHDB2018
-                    worka(i,j) = worka(i,j) + floe_rad_c(k)*aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                    worka(i,j) = worka(i,j) + floe_rad_c(k)*aicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
                     ! normalization factor
-                    workb(i,j) = workb(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                    workb(i,j) = workb(i,j) + aicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
                 end do
                 end do
                 ! factor of 2 for diameter
-                if (workb(i,j).gt.c0) worka(i,j) = c2*worka(i,j) / workb(i,j)
-                worka(i,j) = max(3.,worka(i,j))
+                if (workb(i,j).gt.0.03_dbl_kind) then
+                worka(i,j) = c2*worka(i,j)/workb(i,j)
+                worka(i,j) = max(2.*floe_rad_c(1),worka(i,j))
+                end if
              end do
              end do
              call accum_hist_field(n_diamforww,   iblk, worka(:,:), a2D)
@@ -2037,7 +2040,7 @@
                 workb(i,j) = c0  
                 do n = 1, ncat_hist
                 do k = 1, nfsd_hist
-                    worka(i,j) = worka(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                    worka(i,j) = worka(i,j) + aicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
                     workb(i,j) = workb(i,j) + vicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
                 end do
                 end do
@@ -2055,14 +2058,15 @@
            do j = 1, ny_block
            do i = 1, nx_block
             worka(i,j) = c0            
-            if (aice_init(i,j,iblk) > puny) then
+            if (aice(i,j,iblk) > 0.03_dbl_kind) then
              do k = 1, nfsd_hist
                 do n = 1, ncat_hist
                   worka(i,j) = worka(i,j) &
                                + (trcrn(i,j,nt_fsd+k-1,n,iblk) * floe_rad_c(k) &
-                               * aicen_init(i,j,n,iblk)/aice_init(i,j,iblk))
+                               * aicen(i,j,n,iblk)) !LR maybe remove /aice(i,j,iblk))
                  end do
               end do
+              worka(i,j) = MAX(floe_rad_c(1),worka(i,j))
             endif
            end do
            end do
@@ -2073,12 +2077,12 @@
           do j = 1, ny_block
           do i = 1, nx_block
             worka(i,j) = c0
-            if (aice_init(i,j,iblk) > puny) then
+            if (aice(i,j,iblk) > 0.15_dbl_kind) then
              do k = 1, nfsd_hist
                do n = 1, ncat_hist
                   worka(i,j) = worka(i,j) &
                                + (c8*floeshape*trcrn(i,j,nt_fsd+k-1,n,iblk)*floe_rad_c(k) &
-                                    *aicen_init(i,j,n,iblk)/(c4*floeshape*floe_rad_c(k)**2 *aice_init(i,j,iblk)))
+                                    *aicen(i,j,n,iblk)/(c4*floeshape*floe_rad_c(k)**2)) ! LR maybe remove*aice(i,j,iblk)))
                end do
               end do
             endif
