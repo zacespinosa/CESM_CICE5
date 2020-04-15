@@ -1920,18 +1920,17 @@
       ! Decide how to distribute the new ice.
       !-----------------------------------------------------------------
 
-      tot_latg = c0
       if (vi0new(ij) > c0) then
    
-        if (tr_fsd) & ! lateral growth of existing ice
-            ! calculate change in conc due to lateral growth
-            ! update vi0new, without change to afsdn or aicen
-            call fsd_lateral_growth (dt,         aice(i,j),        &
-                                  aicen(i,j,:),  vicen(i,j,:),     &
-                                  vi0new(ij),    frazil(i,j),      &
-                                  afsdn(i,j,:,:),                  &
-                                  G_radial(i,j), d_an_latg(i,j,:), &
-                                  tot_latg )
+!        if (tr_fsd) & ! lateral growth of existing ice
+!            ! calculate change in conc due to lateral growth
+!            ! update vi0new, without change to afsdn or aicen
+!            call fsd_lateral_growth (dt,         aice(i,j),        &
+!                                  aicen(i,j,:),  vicen(i,j,:),     &
+!                                  vi0new(ij),    frazil(i,j),      &
+!                                  afsdn(i,j,:,:),                  &
+!                                  G_radial(i,j), d_an_latg(i,j,:), &
+!                                  tot_latg )
 
 
          ai0mod = aice0(i,j)
@@ -2136,7 +2135,6 @@
       ! to category 1, while the others use a salinity profile.
       !-----------------------------------------------------------------
 
-
       ncats = 1                  ! add new ice to category 1 by default
       if (tr_fsd) ncats = ncat   ! add new ice laterally to all categories
   
@@ -2151,7 +2149,7 @@
          m = indxij2(ij)
  
          ! not needed possibly??
-         !if (d_an_tot(i,j,n) > c0 .and. vin0new(m,n) > c0) then  ! add ice to category n
+         if (d_an_tot(i,j,n) > c0 .and. vin0new(m,n) > c0) then  ! add ice to category n
 
          area1        = aicen(i,j,n)   ! save
          vice1(ij)    = vicen(i,j,n)   ! save
@@ -2225,7 +2223,7 @@
             endif ! tr_pond
          endif ! vicen>puny
 
-         !endif ! d_an_tot
+         endif ! d_an_tot
  
       enddo !ij
 

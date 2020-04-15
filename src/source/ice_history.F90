@@ -159,11 +159,11 @@
         f_afsd  = 'x'
         f_fsdperim = 'x'
         f_fsdrad   = 'x'
-        f_dafsdweld = 'x'
-        f_dafsdwave ='x'
-        f_dafsdnewi = 'x'
-        f_dafsdlatm = 'x'
-        f_dafsdlatg = 'x'
+        f_dafsd_weld = 'x'
+        f_dafsd_wave ='x'
+        f_dafsd_newi = 'x'
+        f_dafsd_latm = 'x'
+        f_dafsd_latg = 'x'
         f_concforww = 'x'
         f_diamforww = 'x'
         f_thickforww = 'x'
@@ -363,11 +363,11 @@
       call broadcast_scalar (f_afsdn, master_task)
       call broadcast_scalar (f_fsdrad, master_task)
       call broadcast_scalar (f_fsdperim, master_task)
-      call broadcast_scalar (f_dafsdnewi, master_task)
-      call broadcast_scalar (f_dafsdlatm, master_task)
-      call broadcast_scalar (f_dafsdwave, master_task)
-      call broadcast_scalar (f_dafsdweld, master_task)
-      call broadcast_scalar (f_dafsdlatg, master_task)
+      call broadcast_scalar (f_dafsd_newi, master_task)
+      call broadcast_scalar (f_dafsd_latm, master_task)
+      call broadcast_scalar (f_dafsd_wave, master_task)
+      call broadcast_scalar (f_dafsd_weld, master_task)
+      call broadcast_scalar (f_dafsd_latg, master_task)
 ! LR
       call broadcast_scalar (f_hi, master_task)
       call broadcast_scalar (f_hs, master_task)
@@ -1586,26 +1586,26 @@
               "per unit bin width ",c1,c0, &
               ns1, f_afsd)
 
-           call define_hist_field(n_dafsdnewi,"dafsdnewi","1",tstr3Df, tcstr, & 
+           call define_hist_field(n_dafsd_newi,"dafsd_newi","1",tstr3Df, tcstr, & 
               "Change in fsd - newi",    &
               "Avg over freq period",        &
-               c1, c0, ns1, f_dafsdnewi)
-           call define_hist_field(n_dafsdlatm,"dafsdlatm","1",tstr3Df, tcstr, & 
+               c1, c0, ns1, f_dafsd_newi)
+           call define_hist_field(n_dafsd_latm,"dafsd_latm","1",tstr3Df, tcstr, & 
               "Change in fsd - latm",    &
               "Avg over freq period",        &
-               c1, c0, ns1, f_dafsdlatm)
-           call define_hist_field(n_dafsdweld,"dafsdweld","1",tstr3Df, tcstr, & 
+               c1, c0, ns1, f_dafsd_latm)
+           call define_hist_field(n_dafsd_weld,"dafsd_weld","1",tstr3Df, tcstr, & 
               "Change in fsd - weld",    &
               "Avg over freq period",        &
-               c1, c0, ns1, f_dafsdweld)
-           call define_hist_field(n_dafsdwave,"dafsdwave","1",tstr3Df, tcstr, & 
+               c1, c0, ns1, f_dafsd_weld)
+           call define_hist_field(n_dafsd_wave,"dafsd_wave","1",tstr3Df, tcstr, & 
               "Change in fsd - waves",    &
               "Avg over freq period",        &
-               c1, c0, ns1, f_dafsdwave)
-           call define_hist_field(n_dafsdlatg,"dafsdlatg","1",tstr3Df, tcstr, & 
+               c1, c0, ns1, f_dafsd_wave)
+           call define_hist_field(n_dafsd_latg,"dafsd_latg","1",tstr3Df, tcstr, & 
               "Change in fsd - latg",    &
               "Avg over freq period",        &
-               c1, c0, ns1, f_dafsdlatg)
+               c1, c0, ns1, f_dafsd_latg)
  
 
       endif ! if (histfreq(ns1) /= 'x') then
@@ -3153,20 +3153,20 @@
                                  worke, a3Df)
         end if
  
-        if (f_dafsdnewi      (1:1) /= 'x') call &
-                                        accum_hist_field (n_dafsdnewi-n3Dbcum, &
+        if (f_dafsd_newi      (1:1) /= 'x') call &
+                                        accum_hist_field (n_dafsd_newi-n3Dbcum, &
                                         iblk, nfsd_hist, d_afsd_newi(:,:,:,iblk), a3Df)        
-        if (f_dafsdlatm     (1:1) /= 'x') call &
-                                         accum_hist_field(n_dafsdlatm-n3Dbcum, &
+        if (f_dafsd_latm     (1:1) /= 'x') call &
+                                         accum_hist_field(n_dafsd_latm-n3Dbcum, &
                                          iblk, nfsd_hist, d_afsd_latm(:,:,:,iblk), a3Df)
-        if (f_dafsdwave     (1:1) /= 'x') call &
-                                         accum_hist_field(n_dafsdwave-n3Dbcum, &
+        if (f_dafsd_wave     (1:1) /= 'x') call &
+                                         accum_hist_field(n_dafsd_wave-n3Dbcum, &
                                          iblk, nfsd_hist, d_afsd_wave(:,:,:,iblk), a3Df)
-        if (f_dafsdweld      (1:1) /= 'x') call & 
-                                         accum_hist_field(n_dafsdweld-n3Dbcum, &
+        if (f_dafsd_weld      (1:1) /= 'x') call & 
+                                         accum_hist_field(n_dafsd_weld-n3Dbcum, &
                                          iblk, nfsd_hist, d_afsd_weld(:,:,:,iblk), a3Df)
-        if (f_dafsdlatg     (1:1) /= 'x') call & 
-                                         accum_hist_field(n_dafsdlatg-n3Dbcum, &
+        if (f_dafsd_latg     (1:1) /= 'x') call & 
+                                         accum_hist_field(n_dafsd_latg-n3Dbcum, &
                                          iblk, nfsd_hist, d_afsd_latg(:,:,:,iblk), a3Df)
 
 

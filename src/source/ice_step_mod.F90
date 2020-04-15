@@ -416,13 +416,10 @@
             indxj = 0
             do j = jlo, jhi
             do i = ilo, ihi
-               if (aicen(i,j,n,iblk) > puny) then
+               if (aice(i,j,iblk) > puny) then
                   icells = icells + 1
                   indxi(icells) = i
                   indxj(icells) = j
-               ! LR may remove
-               else
-                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk) = c0
                endif
             enddo               ! i
             enddo               ! j
@@ -1177,6 +1174,23 @@
                                   this_block%j_glob(jstop) 
             call abort_ice ('ice: ITD cleanup error in step_therm2')
          endif
+
+
+!         ! LR may remove
+!         if (tr_fsd) then
+!
+!            do j = jlo, jhi
+!            do i = ilo, ihi
+!               do n = 1, ncat
+!               if (aicen(i,j,n,iblk) > puny) then  
+!                  call icepack_cleanup_fsdn(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk))
+!               else
+!                  if (tr_fsd) trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk) = c0
+!               endif
+!            enddo
+!            enddo               ! i
+!            enddo               ! j
+!         end if
 
       end subroutine step_therm2
 

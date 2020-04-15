@@ -198,9 +198,9 @@
       character (len=max_nstrm), public :: &
 !          f_example   = 'md', &
            f_afsd            = 'm', f_afsdn      = 'm', &
-           f_dafsdnewi       = 'm', f_dafsdlatm  = 'm', &  
-           f_dafsdwave       = 'm', f_dafsdweld  = 'm', &
-           f_dafsdlatg       = 'm'                    , &
+           f_dafsd_newi       = 'm', f_dafsd_latm  = 'm', &  
+           f_dafsd_wave       = 'm', f_dafsd_weld  = 'm', &
+           f_dafsd_latg       = 'm'                    , &
            f_fbottom         = 'm', f_fside      = 'm', &
            f_fsdrad          = 'm', f_fsdperim   = 'm', &
            f_concforww       = 'm', f_diamforww  = 'm', &
@@ -347,9 +347,9 @@
            f_VGRDb    , f_NFSD     , & ! LR
 !          f_example  , &
            f_afsd,         f_afsdn,        &
-           f_dafsdnewi,    f_dafsdlatm,    &
-           f_dafsdwave,    f_dafsdweld,    &
-           f_dafsdlatg,                    &
+           f_dafsd_newi,    f_dafsd_latm,    &
+           f_dafsd_wave,    f_dafsd_weld,    &
+           f_dafsd_latg,                    &
            f_fsdperim,     f_fsdrad,       &
            f_fbottom,      f_fside,        &
            f_concforww,    f_diamforww,    &
@@ -513,9 +513,9 @@
 !          n_example    , &
            n_afsd          , n_afsdn          , & 
            n_fsdperim      , n_fsdrad         , &
-           n_dafsdnewi     , n_dafsdlatm      , &
-           n_dafsdwave     , n_dafsdweld      , &
-           n_dafsdlatg                        , &
+           n_dafsd_newi     , n_dafsd_latm      , &
+           n_dafsd_wave     , n_dafsd_weld      , &
+           n_dafsd_latg                        , &
            n_fbottom       , n_fside          , &
            n_concforww     , n_diamforww      , &
            n_thickforww                       , &

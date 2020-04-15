@@ -2395,7 +2395,7 @@
 
 
 
-  <entry id="f_dafsdweld">
+  <entry id="f_dafsd_weld">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2406,7 +2406,7 @@
     </values>
   </entry>
 
-  <entry id="f_dafsdwave">
+  <entry id="f_dafsd_wave">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2417,7 +2417,7 @@
     </values>
   </entry>
 
-  <entry id="f_dafsdnewi">
+  <entry id="f_dafsd_newi">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2428,7 +2428,7 @@
     </values>
   </entry>
 
-  <entry id="f_dafsdlatm">
+  <entry id="f_dafsd_latm">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2439,7 +2439,7 @@
     </values>
   </entry>
 
-  <entry id="f_dafsdlatg">
+  <entry id="f_dafsd_latg">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
