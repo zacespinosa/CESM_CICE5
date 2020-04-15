@@ -616,6 +616,7 @@
          afsdn_latg     ! fsd after lateral growth
 
       real (kind=dbl_kind), dimension (nfsd) :: &
+         diff, &
          dafsd_tmp,  &  ! tmp FSD
          df_flx     , & ! finite differences for fsd
          afsd_ni        ! fsd after new ice added
@@ -624,6 +625,8 @@
          f_flx          ! finite differences in floe size
 
       ! everything is the same if left unchanged
+
+      !call icepack_cleanup_fsd(afsdn(:,n) )
       afsdn_latg(:,n) = afsdn(:,n)  ! default
       trcrn(:,n) = afsdn(:,n)
 
@@ -636,7 +639,10 @@
          DO WHILE (elapsed_t.lt.dt)
         
              nsubt = nsubt + 1
-              
+
+             ! LR need to do this properly
+             if (nsubt.gt.100) print *, 'latg not converging'
+ 
              ! finite differences
              df_flx(:) = c0 ! NB could stay zero if all in largest FS cat
              f_flx (:) = c0
@@ -647,6 +653,7 @@
                 df_flx(k) = f_flx(k+1) - f_flx(k)
              end do
 
+         if (abs(sum(df_flx)) > puny) print*,'fsd_add_new ERROR df_flx /= 0'
 
              dafsd_tmp(:) = c0
              tmp = SUM(afsdn_latg(:,n)/floe_rad_c(:))
@@ -656,13 +663,11 @@
 
              end do
 
-             ! LR new
-             WHERE(ABS(dafsd_tmp).lt.puny) dafsd_tmp = c0
 
             ! timestep required for this
             subdt = get_subdt_fsd(nfsd, afsdn_latg(:,n), dafsd_tmp(:)) 
             subdt = MIN(subdt, dt)
- 
+
             ! update fsd and elapsed time
             afsdn_latg(:,n) = afsdn_latg(:,n) + subdt*dafsd_tmp(:)
             elapsed_t = elapsed_t + subdt
@@ -741,14 +746,17 @@
       endif    ! n = 1
 
       ! history/diagnostics
+      diff = area2(n)*afsdn_latg(:,n) - aicen_init(n)*afsdn(:,n)
+      WHERE (ABS(diff)<puny) diff = c0
       do k = 1, nfsd
          ! sum over n
-         d_afsd_latg(k) = d_afsd_latg(k) &
-                + area2(n)*afsdn_latg(k,n) & ! after latg
-                - aicen_init(n)*afsdn(k,n) ! at start
+         d_afsd_latg(k) = d_afsd_latg(k) + diff(k)
          if (n.eq.1) d_afsd_newi(k) = aicen(n)*trcrn(k,n) & ! after latg and newi
                 - area2(n)*afsdn_latg(k,n) ! after latg
       enddo    ! k
+
+     print *, '------------'
+     if (ANY(diff(8:).lt.-puny)) print *, 'diff=',area2(n)*afsdn_latg(:,n)-aicen_init(n)*afsdn(:,n)
 
       end subroutine fsd_add_new_ice
 
@@ -907,7 +915,7 @@
          aminweld = p1  ! minimum ice concentration likely to weld
 
       real (kind=dbl_kind), parameter :: &
-         c_weld = 1.0e-7_dbl_kind    ! LR remove was -8 
+         c_weld = 1.0e-8_dbl_kind    
                         ! constant of proportionality for welding
                         ! total number of floes that weld with another, per square meter,
                         ! per unit time, in the case of a fully covered ice surface
@@ -1004,8 +1012,6 @@
 
             call icepack_cleanup_fsdn (afsdn(:,n))
             
-            if (ANY(afsdn(:,n) > c1 + puny)) stop 'weld'
-
             do k = 1, nfsd
                afsdn(k,n) = afsd_tmp(k)
                trcrn(k,n) = afsdn(k,n)

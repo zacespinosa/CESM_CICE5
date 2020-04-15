@@ -1932,7 +1932,7 @@
                                   afsdn(i,j,:,:),                  &
                                   G_radial(i,j), d_an_latg(i,j,:), &
                                   tot_latg )
-         
+
 
          ai0mod = aice0(i,j)
          ! separate frazil ice growth from lateral ice growth
