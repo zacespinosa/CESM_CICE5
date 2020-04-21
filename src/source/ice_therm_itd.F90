@@ -1921,16 +1921,16 @@
       !-----------------------------------------------------------------
 
       if (vi0new(ij) > c0) then
-   
-!        if (tr_fsd) & ! lateral growth of existing ice
-!            ! calculate change in conc due to lateral growth
-!            ! update vi0new, without change to afsdn or aicen
-!            call fsd_lateral_growth (dt,         aice(i,j),        &
-!                                  aicen(i,j,:),  vicen(i,j,:),     &
-!                                  vi0new(ij),    frazil(i,j),      &
-!                                  afsdn(i,j,:,:),                  &
-!                                  G_radial(i,j), d_an_latg(i,j,:), &
-!                                  tot_latg )
+         tot_latg = c0   
+         if (tr_fsd) & ! lateral growth of existing ice
+            ! calculate change in conc due to lateral growth
+            ! update vi0new, without change to afsdn or aicen
+            call fsd_lateral_growth (dt,         aice(i,j),        &
+                                  aicen(i,j,:),  vicen(i,j,:),     &
+                                  vi0new(ij),    frazil(i,j),      &
+                                  afsdn(i,j,:,:),                  &
+                                  G_radial(i,j), d_an_latg(i,j,:), &
+                                  tot_latg )
 
 
          ai0mod = aice0(i,j)
@@ -2178,7 +2178,7 @@
             call fsd_add_new_ice (n,                         & ! in
                                   dt,         d_an_newi(i,j,1), & ! in
                                   d_an_latg(i,j,:),          & ! in
-                                  d_an_newi(i,j,:),          & ! in
+                                  d_an_newi(i,j,:),          & ! !in
                                   G_radial(i,j),   area2(:), & ! in
                                   wave_sig_ht(i,j),          & ! in
                                   wave_spectrum(i,j,:),      & ! in 

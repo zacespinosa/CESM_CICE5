@@ -273,6 +273,11 @@
             totfrac = totfrac + afsd(k)
         enddo
 
+        ! LR remove
+        !afsd(:) = c0
+        !afsd(1) = c1
+
+
         do k = 1, nfsd 
             afsdn(:,:,k,:) = afsd(k)/totfrac
         enddo
@@ -747,6 +752,16 @@
                 + aicen(n)*trcrn(k,n) & ! after latg and newi
                 - area2(n)*afsdn_latg(k,n) ! after latg
       enddo    ! k
+
+      if (ANY(d_afsd_latg(6:).lt.-puny)) then
+          print *, 'init ',afsdn(:,n)
+          print *, 'fin ',afsdn_latg(:,n)
+          print *, 'diff ',area2(n)*afsdn_latg(:,n)-aicen_init(n)*afsdn(:,n)
+          print *, 'Gr=',G_radial
+          print *, 'dfflx ',-df_flx
+          print *, 'term2 ',c2 * G_radial * afsdn(:,n) &
+                            * (c1/floe_rad_c(:) - SUM(afsdn(:,n)/floe_rad_c(:)))
+     end if
 
       end subroutine fsd_add_new_ice
 

@@ -312,7 +312,6 @@
          enddo
          enddo
 
-
          do n = 1, ncat
          do j = 1, ny_block
          do i = 1, nx_block
@@ -332,7 +331,6 @@
          do i = 1, nx_block
 
             if (aice_init(i,j,iblk) > puny) then
-
                raice           = c1 / aice_init(i,j,iblk)
                frain(i,j,iblk) = frain(i,j,iblk)*raice
                fsnow(i,j,iblk) = fsnow(i,j,iblk)*raice
@@ -416,7 +414,7 @@
             indxj = 0
             do j = jlo, jhi
             do i = ilo, ihi
-               if (aice(i,j,iblk) > puny) then
+               if (aicen(i,j,n,iblk) > puny) then
                   icells = icells + 1
                   indxi(icells) = i
                   indxj(icells) = j
@@ -874,7 +872,7 @@
       use ice_flux, only: rside, fside, &
                           sst, Tf, dwavefreq, &
                           wave_spectrum, wave_sig_ht   
-       use ice_fsd, only:icepack_weldfsd, &
+       use ice_fsd, only:icepack_weldfsd, icepack_cleanup_fsdn,&
                          d_afsd_latg, &
                          d_afsd_newi, &
                          d_afsd_latm, &
@@ -1026,8 +1024,6 @@
          enddo               ! i
          enddo               ! j
 
-
-
          call ice_timer_start(timer_addnewice, iblk)
  
          call add_new_ice (nx_block,  ny_block,     &
@@ -1175,22 +1171,22 @@
             call abort_ice ('ice: ITD cleanup error in step_therm2')
          endif
 
+         ! LR may remove
+         if (tr_fsd) then
+            do j = jlo, jhi
+            do i = ilo, ihi
+               do n = 1, ncat
+               if (aicen(i,j,n,iblk) > puny) then  
+                  call icepack_cleanup_fsdn(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk))
+               else
+                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk) = c0
+               endif
+               enddo
+            enddo               ! i
+            enddo               ! j
+         end if
 
-!         ! LR may remove
-!         if (tr_fsd) then
-!
-!            do j = jlo, jhi
-!            do i = ilo, ihi
-!               do n = 1, ncat
-!               if (aicen(i,j,n,iblk) > puny) then  
-!                  call icepack_cleanup_fsdn(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk))
-!               else
-!                  if (tr_fsd) trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk) = c0
-!               endif
-!            enddo
-!            enddo               ! i
-!            enddo               ! j
-!         end if
+
 
       end subroutine step_therm2
 
