@@ -1149,7 +1149,6 @@
          rsiden        ! delta_an/aicen
 
       real (kind=dbl_kind), dimension (ncat) :: &
-         qin       , & ! enthalpy
          delta_an    ! change in the ITD
  
       real (kind=dbl_kind), dimension (nx_block,ny_block,nfsd,ncat) :: &
@@ -1169,6 +1168,7 @@
 
 
       rsiden = c0
+      G_radial(:,:) = c0
 
       if (tr_fsd) then
          
@@ -1263,7 +1263,6 @@
 
              do n = 1, ncat
                if (aicen(i,j,n).gt.puny) then 
-                 call icepack_cleanup_fsdn(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n))
                
                  cat1_arealoss = &
                    -trcrn(i,j,nt_fsd+1-1,n) * aicen(i,j,n) * dt &
@@ -1385,7 +1384,11 @@
 
                       END DO
  
+                      call icepack_cleanup_fsdn(afsd_tmp(:))
+
                       trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = afsd_tmp(:)
+                   else
+                      trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n) = c0
 
                   end if ! aicen
                end if ! rside > 0, otherwise do nothing
@@ -1980,6 +1983,8 @@
       ! Identify grid cells receiving new ice.
       !-----------------------------------------------------------------
 
+         i = indxi(ij)
+         j = indxj(ij)
 
          if (SUM(vin0new(ij,:)) > c0) then  ! area growth in all categories 
             jcells = jcells + 1
