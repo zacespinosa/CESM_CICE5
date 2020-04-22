@@ -1691,7 +1691,6 @@
          Sprofile         ! salinity profile used for new ice additions
 
       integer (kind=int_kind) :: &
-         nsubt              , & ! fsd timestep counter
          jcells, kcells     , & ! grid cell counters
          ij, m                  ! combined i/j horizontal indices
 
@@ -1922,7 +1921,12 @@
       ! Decide how to distribute the new ice.
       !-----------------------------------------------------------------
 
+      hsurp(ij) = c0
+      ai0new(ij) = c0
+      hi0new = c0
+
       if (vi0new(ij) > c0) then
+
          tot_latg = c0   
          if (tr_fsd) & ! lateral growth of existing ice
             ! calculate change in conc due to lateral growth
@@ -2148,7 +2152,7 @@
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
       do ij = 1, jcells
-         i = indxi2(ij)
+        i = indxi2(ij)
          j = indxj2(ij)
          m = indxij2(ij)
  
@@ -2241,7 +2245,7 @@
             j = indxj2(ij)
             m = indxij2(ij)
 
-            if ((vin0new(m,n).gt.c0).and.(d_an_tot(i,j,n).gt.c0) ) then
+            !if ((vin0new(m,n).gt.c0).and.(d_an_tot(i,j,n).gt.c0) ) then
             if (vicen(i,j,n) > c0) then
                ! factor of nilyr cancels out
                ! enthalpy
@@ -2253,7 +2257,7 @@
               (trcrn(i,j,nt_sice+k-1,n)*vice1(ij) &
                                    + Sprofile(m,k)*vin0new(m,n))/vicen(i,j,n)
             endif
-            end if
+            !end if
          enddo ! ij
       enddo ! k
 

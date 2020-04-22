@@ -589,7 +589,8 @@
                                 TLAT(istop,jstop,iblk)*rad_to_deg, &
                                 TLON(istop,jstop,iblk)*rad_to_deg
                write(nu_diag,*) 'aice:', &
-                                aice(istop,jstop,iblk)
+                                aice(istop,jstop,iblk),fbottom(istop,jstop,iblk),&
+                                Tbotn(istop,jstop), frzmlt(istop,jstop,iblk), sst(istop,jstop,iblk)
                write(nu_diag,*) 'n: ',n, 'aicen: ', &
                                 aicen(istop,jstop,n,iblk)
             endif

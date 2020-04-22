@@ -835,7 +835,6 @@
          do ij = 1, imelt
             i = indxi(ij)
             j = indxj(ij)
-            ! lateral heat flux
             if (tr_fsd) then
                 ! directly from lateral melt rate
                 ! NB this uses enthalphy averaged for all thickness categories
@@ -864,9 +863,11 @@
          fbot  (i,j) = fbot  (i,j) * xtmp
          rside (i,j) = rside (i,j) * xtmp
          fside (i,j) = fside (i,j) * xtmp
-     enddo                     ! ij
+      enddo                     ! ij
 
       deallocate(etot)
+      deallocate(qavg)
+
 
       end subroutine frzmlt_bottom_lateral
 
