@@ -1880,9 +1880,8 @@
          endif
 
          ! history diagnostics
-         if (.NOT.tr_fsd) frazil(i,j) = vi0new(ij)
+         frazil(i,j) = vi0new(ij)
 
-         ! NB this won't work with FSD
          if (present(frz_onset) .and. present(yday)) then
             if (frazil(i,j) > puny .and. frz_onset(i,j) < puny) &
                  frz_onset(i,j) = yday
@@ -1927,10 +1926,10 @@
             ! update vi0new, without change to afsdn or aicen
             call fsd_lateral_growth (dt,         aice(i,j),        &
                                   aicen(i,j,:),  vicen(i,j,:),     &
-                                  vi0new(ij),    frazil(i,j),      &
+                                  vi0new(ij),    frazil(i,j),      & ! these two are inout
                                   afsdn(i,j,:,:),                  &
-                                  G_radial(i,j), d_an_latg(i,j,:), &
-                                  tot_latg )
+                                  G_radial(i,j), d_an_latg(i,j,:), & ! these are out
+                                  tot_latg ) ! this is out
 
 
          ai0mod = aice0(i,j)
