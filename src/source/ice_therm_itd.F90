@@ -2180,22 +2180,22 @@
 
 
 
-!         if (tr_fsd) & ! evolve the floe size distribution
-!            ! both new frazil ice and lateral growth
-!
-!            call fsd_add_new_ice (n,                         & ! in
-!                                  dt,         d_an_newi(i,j,1), & ! in
-!                                  d_an_latg(i,j,:),          & ! in
-!                                  d_an_newi(i,j,:),          & ! !in
-!                                  G_radial(i,j),   area2(:), & ! in
-!                                  wave_sig_ht(i,j),          & ! in
-!                                  wave_spectrum(i,j,:),      & ! in 
-!                                  d_afsd_latg(i,j,:),        & ! inout
-!                                  d_afsd_newi(i,j,:),        & ! inout
-!                                  afsdn(i,j,:,:),            & ! in
-!                                  aicen_init(i,j,:),         & ! in
-!                                  aicen(i,j,:),              & ! in
-!                                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:)) ! inout
+         if (tr_fsd) & ! evolve the floe size distribution
+            ! both new frazil ice and lateral growth
+
+            call fsd_add_new_ice (n,                         & ! in
+                                  dt,         d_an_newi(i,j,1), & ! in
+                                  d_an_latg(i,j,:),          & ! in
+                                  d_an_newi(i,j,:),          & ! !in
+                                  G_radial(i,j),   area2(:), & ! in
+                                  wave_sig_ht(i,j),          & ! in
+                                  wave_spectrum(i,j,:),      & ! in 
+                                  d_afsd_latg(i,j,:),        & ! inout
+                                  d_afsd_newi(i,j,:),        & ! inout
+                                  afsdn(i,j,:,:),            & ! in
+                                  aicen_init(i,j,:),         & ! in
+                                  aicen(i,j,:),              & ! in
+                                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:)) ! inout
 
 
          if (vicen(i,j,n) > puny) then
