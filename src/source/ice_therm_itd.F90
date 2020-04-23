@@ -2152,12 +2152,12 @@
 !cdir nodep      !NEC
 !ocl novrec      !Fujitsu
       do ij = 1, jcells
-        i = indxi2(ij)
+         i = indxi2(ij)
          j = indxj2(ij)
          m = indxij2(ij)
  
          ! not needed possibly??
-         if (d_an_tot(i,j,n) > c0 .and. vin0new(m,n) > c0) then  ! add ice to category n
+         !if (d_an_tot(i,j,n) > c0 .and. vin0new(m,n) > c0) then  ! add ice to category n
 
          area1        = aicen(i,j,n)   ! save
          vice1(ij)    = vicen(i,j,n)   ! save
@@ -2180,22 +2180,22 @@
 
 
 
-         if (tr_fsd) & ! evolve the floe size distribution
-            ! both new frazil ice and lateral growth
-
-            call fsd_add_new_ice (n,                         & ! in
-                                  dt,         d_an_newi(i,j,1), & ! in
-                                  d_an_latg(i,j,:),          & ! in
-                                  d_an_newi(i,j,:),          & ! !in
-                                  G_radial(i,j),   area2(:), & ! in
-                                  wave_sig_ht(i,j),          & ! in
-                                  wave_spectrum(i,j,:),      & ! in 
-                                  d_afsd_latg(i,j,:),        & ! inout
-                                  d_afsd_newi(i,j,:),        & ! inout
-                                  afsdn(i,j,:,:),            & ! in
-                                  aicen_init(i,j,:),         & ! in
-                                  aicen(i,j,:),              & ! in
-                                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:)) ! inout
+!         if (tr_fsd) & ! evolve the floe size distribution
+!            ! both new frazil ice and lateral growth
+!
+!            call fsd_add_new_ice (n,                         & ! in
+!                                  dt,         d_an_newi(i,j,1), & ! in
+!                                  d_an_latg(i,j,:),          & ! in
+!                                  d_an_newi(i,j,:),          & ! !in
+!                                  G_radial(i,j),   area2(:), & ! in
+!                                  wave_sig_ht(i,j),          & ! in
+!                                  wave_spectrum(i,j,:),      & ! in 
+!                                  d_afsd_latg(i,j,:),        & ! inout
+!                                  d_afsd_newi(i,j,:),        & ! inout
+!                                  afsdn(i,j,:,:),            & ! in
+!                                  aicen_init(i,j,:),         & ! in
+!                                  aicen(i,j,:),              & ! in
+!                                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:)) ! inout
 
 
          if (vicen(i,j,n) > puny) then
@@ -2231,7 +2231,7 @@
             endif ! tr_pond
          endif ! vicen>puny
 
-         endif ! d_an_tot
+         !endif ! d_an_tot
  
       enddo !ij
 
