@@ -921,7 +921,7 @@
          jhi = this_block%jhi
 
          ! significant wave height for FSD
-         if (tr_fsd) then
+         !if (tr_fsd) then
          wave_sig_ht(:,:,iblk) = c0
          do j = 1, ny_block
          do i = 1, nx_block
@@ -929,7 +929,7 @@
          wave_sig_ht(i,j,iblk) = c4*SQRT(SUM(wave_spectrum(i,j,:,iblk)*dwavefreq(:)))
          end do
          end do
-         end if
+         !end if
 
       !-----------------------------------------------------------------
       ! Let rain drain through to the ocean.

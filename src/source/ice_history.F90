@@ -168,7 +168,7 @@
         f_diamforww = 'x'
         f_thickforww = 'x'
         f_wavespectrum='x'
-        f_wave_sig_ht = 'x'
+        !f_wave_sig_ht = 'x'
     end if 
 
     ! LR remove comment
