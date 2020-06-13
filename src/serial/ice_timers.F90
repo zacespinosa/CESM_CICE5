@@ -1,6 +1,5 @@
-!  SVN:$Id: ice_timers.F90 707 2013-08-22 21:21:05Z eclare $
+!  SVN:$Id: ice_timers.F90 907 2015-01-30 04:53:04Z tcraig $
 !|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-
  module ice_timers
 
 !  This module contains routine for supporting multiple CPU timers
@@ -8,6 +7,8 @@
 !
 ! 2005: Adapted from POP by William Lipscomb
 !       Replaced 'stdout' by 'nu_diag'
+! 2006 ECH: Replaced 'system_clock' timing mechanism by 'MPI_WTIME'
+!           for MPI runs.  Single-processor runs still use system_clock.
 
    use ice_kinds_mod
    use ice_constants, only: c0, c1, bignum
@@ -16,6 +17,9 @@
    use ice_exit, only: abort_ice
    use ice_fileunits, only: nu_diag
    use ice_communicate, only: my_task, master_task
+#ifdef CESMCOUPLED
+   use perf_mod
+#endif
 
    implicit none
    private
@@ -49,11 +53,17 @@
       timer_readwrite,        &! read/write
       timer_diags,            &! diagnostics/history
       timer_hist,             &! diagnostics/history
+#if (defined CESMCOUPLED)
+      timer_cplrecv,          &! receive from coupler
+      timer_rcvsnd,           &! time between receive to send
+      timer_cplsend,          &! send to coupled
+      timer_sndrcv,           &! time between send to receive
+#endif
       timer_bound,            &! boundary updates
       timer_bgc,              &! biogeochemistry
 ! LR
       timer_latmelt,          &
-      timer_merge,            &
+      timer_weld,            &
       timer_addnewice,        &
       timer_waves              ! wave fracture
 ! LR
@@ -104,9 +114,6 @@
    type (timer_data), dimension(max_timers) :: &
       all_timers               ! timer data for all timers
 
-   integer (int_kind) ::      & 
-      cycles_max               ! max clock cycles allowed by system
-
    real (dbl_kind) ::               &
       clock_rate               ! clock rate in seconds for each cycle
 
@@ -127,34 +134,15 @@
 !
 !-----------------------------------------------------------------------
 
-   integer (int_kind) :: &
-      n,                 &! dummy loop counters
-      cycles              ! count rate returned by sys_clock
-
-!-----------------------------------------------------------------------
-!
-!  Call F90 intrinsic system_clock to determine clock rate
-!  and maximum cycles for single-processor runs.  If no clock 
-!  available, print message.  
-!
-!-----------------------------------------------------------------------
-
-   cycles = 0
-
-   call system_clock(count_rate=cycles, count_max=cycles_max)
-
-   if (cycles /= 0) then
-      clock_rate = c1/real(cycles,kind=dbl_kind)
-   else
-      clock_rate = c0
-      write(nu_diag,'(/,a33,/)') '--- No system clock available ---'
-   endif
+   integer (int_kind) :: n ! dummy loop index
 
 !-----------------------------------------------------------------------
 !
 !  initialize timer structures
 !
 !-----------------------------------------------------------------------
+
+   clock_rate = c1
 
    do n=1,max_timers
       all_timers(n)%name = 'unknown_timer_name'
@@ -194,11 +182,18 @@
    call get_ice_timer(timer_bound,    'Bound',    nblocks,distrb_info%nprocs)
    call get_ice_timer(timer_bgc,      'BGC',      nblocks,distrb_info%nprocs)
 ! LR
-   call get_ice_timer(timer_merge,    'Merge',    nblocks,distrb_info%nprocs)
+   call get_ice_timer(timer_weld,     'Weld',    nblocks,distrb_info%nprocs)
    call get_ice_timer(timer_addnewice,'AddNew',    nblocks,distrb_info%nprocs)
    call get_ice_timer(timer_latmelt,  'LatMelt',  nblocks,distrb_info%nprocs)
    call get_ice_timer(timer_waves,    'Waves',    nblocks,distrb_info%nprocs)
 ! LR
+!
+#if (defined CESMCOUPLED)
+   call get_ice_timer(timer_cplrecv,  'Cpl-recv', nblocks,distrb_info%nprocs)
+   call get_ice_timer(timer_rcvsnd,   'Rcv->Snd', nblocks,distrb_info%nprocs)
+   call get_ice_timer(timer_cplsend,  'Cpl-Send', nblocks,distrb_info%nprocs)
+   call get_ice_timer(timer_sndrcv,   'Snd->Rcv', nblocks,distrb_info%nprocs)
+#endif
 !   call get_ice_timer(timer_tmp,      '         ',nblocks,distrb_info%nprocs)
 
 !-----------------------------------------------------------------------
@@ -335,8 +330,13 @@
                                ! (if timer called outside of block
                                ! region, no block info required)
 
-   integer (int_kind) :: &
-      cycles                   ! count rate return by sys_clock
+#ifdef CESMCOUPLED
+   real (dbl_kind) :: wall, usr, sys
+#else
+   double precision MPI_WTIME
+   external MPI_WTIME
+#endif
+
 
 !-----------------------------------------------------------------------
 !
@@ -360,8 +360,13 @@
          !*** start block timer
 
          all_timers(timer_id)%block_started(block_id) = .true.
-         call system_clock(count=cycles)
-         all_timers(timer_id)%block_cycles1(block_id) = real(cycles,kind=dbl_kind)
+#ifdef CESMCOUPLED
+         call t_startf('ICE:'//all_timers(timer_id)%name)
+         call t_stampf(wall, usr, sys)
+         all_timers(timer_id)%block_cycles1(block_id) = wall
+#else
+         all_timers(timer_id)%block_cycles1(block_id) = MPI_WTIME()
+#endif
 
          !*** start node timer if not already started by
          !*** another thread.  if already started, keep track
@@ -374,8 +379,12 @@
             all_timers(timer_id)%node_started = .true.
             all_timers(timer_id)%num_starts   = 1
             all_timers(timer_id)%num_stops    = 0
-            call system_clock(count=cycles)
-            all_timers(timer_id)%node_cycles1 = real(cycles,kind=dbl_kind)
+#ifdef CESMCOUPLED
+            call t_stampf(wall, usr, sys)
+            all_timers(timer_id)%node_cycles1 = wall
+#else
+            all_timers(timer_id)%node_cycles1 = MPI_WTIME()
+#endif
          else
             all_timers(timer_id)%num_starts = &
             all_timers(timer_id)%num_starts + 1
@@ -396,8 +405,13 @@
          !*** start node timer
 
          all_timers(timer_id)%node_started = .true.
-         call system_clock(count=cycles)
-         all_timers(timer_id)%node_cycles1 = real(cycles,kind=dbl_kind)
+#ifdef CESMCOUPLED
+         call t_startf('ICE:'//all_timers(timer_id)%name)
+         call t_stampf(wall, usr, sys)
+         all_timers(timer_id)%node_cycles1 = wall
+#else
+         all_timers(timer_id)%node_cycles1 = MPI_WTIME()
+#endif
 
       endif
    else
@@ -428,6 +442,13 @@
                                ! (if timer called outside of block
                                ! region, no block info required)
 
+#ifdef CESMCOUPLED
+   real (dbl_kind) :: wall, usr, sys
+#else
+   double precision MPI_WTIME
+   external MPI_WTIME
+#endif
+
 !-----------------------------------------------------------------------
 !
 !  local variables
@@ -437,17 +458,19 @@
    real (dbl_kind) :: &
       cycles1, cycles2   ! temps to hold cycle info before correction
 
-   integer (int_kind) :: &
-      cycles                   ! count rate returned by sys_clock
-
 !-----------------------------------------------------------------------
 !
 !  get end cycles
 !
 !-----------------------------------------------------------------------
 
-   call system_clock(count=cycles)
-   cycles2 = real(cycles,kind=dbl_kind)
+#ifdef CESMCOUPLED
+   call t_stopf('ICE:'//all_timers(timer_id)%name)
+   call t_stampf(wall, usr, sys)
+   cycles2 = wall
+#else
+   cycles2 = MPI_WTIME()
+#endif
 
 !-----------------------------------------------------------------------
 !
@@ -465,18 +488,10 @@
 
          all_timers(timer_id)%block_started(block_id) = .false.
 
-         !*** correct for cycle wraparound and accumulate time
-
          cycles1 = all_timers(timer_id)%block_cycles1(block_id)
-         if (cycles2 >= cycles1) then
-            all_timers(timer_id)%block_accum_time(block_id) = &
-            all_timers(timer_id)%block_accum_time(block_id) + &
-               clock_rate*(cycles2 - cycles1)
-         else
-            all_timers(timer_id)%block_accum_time(block_id) = &
-            all_timers(timer_id)%block_accum_time(block_id) + &
-               clock_rate*(cycles_max + cycles2 - cycles1)
-         endif
+         all_timers(timer_id)%block_accum_time(block_id) = &
+         all_timers(timer_id)%block_accum_time(block_id) + &
+            clock_rate*(cycles2 - cycles1)
 
          !*** stop node timer if number of requested stops
          !*** matches the number of starts (to avoid stopping
@@ -493,15 +508,9 @@
              all_timers(timer_id)%num_stops) then
 
             all_timers(timer_id)%node_started = .false.
-            if (cycles2 >= cycles1) then
-               all_timers(timer_id)%node_accum_time = &
-               all_timers(timer_id)%node_accum_time + &
-                  clock_rate*(cycles2 - cycles1)
-            else
-               all_timers(timer_id)%node_accum_time = &
-               all_timers(timer_id)%node_accum_time + &
-                  clock_rate*(cycles_max + cycles2 - cycles1)
-            endif
+            all_timers(timer_id)%node_accum_time = &
+            all_timers(timer_id)%node_accum_time + &
+               clock_rate*(cycles2 - cycles1)
 
             all_timers(timer_id)%num_starts   = 0
             all_timers(timer_id)%num_stops    = 0
@@ -516,20 +525,12 @@
 
       else
 
-         !*** correct for wraparound and accumulate time
-
          all_timers(timer_id)%node_started = .false.
          cycles1 = all_timers(timer_id)%node_cycles1
 
-         if (cycles2 >= cycles1) then
-            all_timers(timer_id)%node_accum_time = &
-            all_timers(timer_id)%node_accum_time + &
-               clock_rate*(cycles2 - cycles1)
-         else
-            all_timers(timer_id)%node_accum_time = &
-            all_timers(timer_id)%node_accum_time + &
-               clock_rate*(cycles_max + cycles2 - cycles1)
-         endif
+         all_timers(timer_id)%node_accum_time = &
+         all_timers(timer_id)%node_accum_time + &
+            clock_rate*(cycles2 - cycles1)
 
       endif
    else
@@ -564,7 +565,8 @@
 !-----------------------------------------------------------------------
 
    integer (int_kind) :: &
-      n,icount           ! dummy loop index and counter
+      n,icount,        & ! dummy loop index and counter
+      nBlocks            
 
    logical (log_kind) :: &
       lrestart_timer     ! flag to restart timer if timer is running
@@ -653,12 +655,12 @@
          !*** mean block time
 
          local_time = c0
-         do n=1,all_timers(timer_id)%num_blocks
+         nBlocks = all_timers(timer_id)%num_blocks
+         do n=1,nBlocks
             local_time = local_time + &
                          all_timers(timer_id)%block_accum_time(n)
          end do
-         icount = global_sum(all_timers(timer_id)%num_blocks, &
-                             distrb_info)
+         icount = global_sum(nBlocks, distrb_info)
          if (icount > 0) mean_time=global_sum(local_time,distrb_info)&
                                    /real(icount,kind=dbl_kind)
 

@@ -259,6 +259,7 @@
               'vicen',ncat,diag,field_loc_center, field_type_scalar)
       call read_restart_field(nu_restart,0,vsnon,'ruf8', &
               'vsnon',ncat,diag,field_loc_center, field_type_scalar)
+      print *, 'trcrn ',SHAPE(trcrn),nt_Tsfc
       call read_restart_field(nu_restart,0,trcrn(:,:,nt_Tsfc,:,:),'ruf8', &
               'Tsfcn',ncat,diag,field_loc_center, field_type_scalar)
 

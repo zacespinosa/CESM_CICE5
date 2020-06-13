@@ -1601,17 +1601,30 @@
   <!-- forcing_nml -->
   <!-- =========================== -->
 
-  <entry id="wave_spec">
-    <type>logical</type>
+  <entry id="wave_spec_type">
+    <type>char</type>
     <category>forcing</category>
     <group>forcing_nml</group>
     <desc>
-     wave spectrum in ice is available for each gridcell
+     wave spectrum in ice type
     </desc>
     <values>
-      <value>.true.</value>
+      <value>"file"</value>
     </values>
   </entry>
+
+  <entry id="wave_solver">
+    <type>char</type>
+    <category>forcing</category>
+    <group>forcing_nml</group>
+    <desc>
+     method of wave fracture solution
+    </desc>
+    <values>
+      <value>"std1iter"</value>
+    </values>
+  </entry>
+
 
 <!--  <entry id="atmbndy">
     <type>char</type>
@@ -2322,8 +2335,40 @@
   <!-- =========================== -->
   <!-- icefields_nml -->
   <!-- =========================== -->
+    <entry id="f_diamforww">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
 
-  <entry id="f_areal_fsd">
+  <entry id="f_thickforww">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+ <entry id="f_concforww">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+ <entry id="f_afsd">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2335,7 +2380,7 @@
   </entry>
 
 
-  <entry id="f_dafsdmrg">
+  <entry id="f_afsdn">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2346,7 +2391,9 @@
     </values>
   </entry>
 
-  <entry id="f_dafsdwave">
+
+
+  <entry id="f_dafsd_weld">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2357,7 +2404,7 @@
     </values>
   </entry>
 
-  <entry id="f_dafsdani">
+  <entry id="f_dafsd_wave">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2368,7 +2415,7 @@
     </values>
   </entry>
 
-  <entry id="f_dafsdlatm">
+  <entry id="f_dafsd_newi">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2379,7 +2426,7 @@
     </values>
   </entry>
 
-  <entry id="f_dafsdlatg">
+  <entry id="f_dafsd_latm">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2390,7 +2437,7 @@
     </values>
   </entry>
 
-  <entry id="f_wave_hs_ice">
+  <entry id="f_dafsd_latg">
     <type>char</type>
     <category>history</category>
     <group>icefields_nml</group>
@@ -2400,6 +2447,52 @@
       <value>mxxxx</value>
     </values>
   </entry>
+
+  <entry id="f_wave_sig_ht">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+  <entry id="f_wavespectrum">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+
+  <entry id="f_fsdrad">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+  <entry id="f_fsdperim">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
 
 
   <entry id="f_tmask">

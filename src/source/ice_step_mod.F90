@@ -218,9 +218,8 @@
       use ice_therm_vertical, only: frzmlt_bottom_lateral, thermo_vertical
       use ice_timers, only: ice_timer_start, ice_timer_stop, timer_ponds
 ! LR CMB liuxy
-      use ice_flux, only: fbottom, flateral
+      use ice_flux, only: fbottom, fside
       use ice_domain_size, only: nfsd
-      use ice_fsd, only: icepack_renormfsd
 ! LR CMB liuxy
 
 
@@ -288,7 +287,7 @@
          l_stop          ! if true, abort the model
 
       integer (kind=int_kind) :: &
-         istop, jstop    ! indices of grid cell where model aborts 
+         istop, jstop, k ! indices of grid cell where model aborts 
 
       real (kind=dbl_kind), dimension (nx_block,ny_block) :: &
          worka, workb
@@ -348,33 +347,24 @@
       ! Adjust frzmlt to account for ice-ocean heat fluxes since last
       !  call to coupler.
       ! Compute lateral and bottom heat fluxes.
-      ! LR: various options for fsd thermodynamics
       !-----------------------------------------------------------------
-! LR                      
-        if (tr_fsd) then
-              ! renormalize areal mFSTD (should already be normalized by
-              ! time evolution equations, but other changes eg. transport
-              ! may result in it being not quite normalized) 
-              ! not needed here any more as no longer use FSD in step therm1!
-              call icepack_renormfsd ( nx_block, ny_block, &
-                                        aicen(:,:,:,iblk),              &
-                                       trcrn(:,:,:,:,iblk) )
 
         ! calculate heat fluxes (does not change ice)
-                call frzmlt_bottom_lateral                               &
-                                (nx_block,           ny_block,           &
-                                 ilo, ihi,           jlo, jhi,           &
-                                 ntrcr,              dt,                 &
-                                 aice  (:,:,  iblk), frzmlt(:,:,  iblk), &
-                                 vicen (:,:,:,iblk), vsnon (:,:,:,iblk), &
-                                 trcrn (:,:,1:ntrcr,:,iblk),             &
-                                 sst   (:,:,  iblk), Tf    (:,:,  iblk), &
-                                 strocnxT(:,:,iblk), strocnyT(:,:,iblk), &
-                                 Tbotn,              fbottom(:,:,iblk),  &
-                                 flateral(:,:,iblk),                     &
-                                 rside (:,:,  iblk), Cdn_ocn (:,:,iblk) )
-        endif
-! LR
+        call frzmlt_bottom_lateral                  &
+                            (nx_block,           ny_block,           &
+                             ilo, ihi,           jlo, jhi,           &
+                             ntrcr,              dt,                 &
+                             aice  (:,:,  iblk), frzmlt(:,:,  iblk), &
+                             vicen (:,:,:,iblk), vsnon (:,:,:,iblk), &
+                             trcrn (:,:,1:ntrcr,:,iblk),             &
+                             sst   (:,:,  iblk), Tf    (:,:,  iblk), &
+                             strocnxT(:,:,iblk), strocnyT(:,:,iblk), &
+                             Tbotn,              fbottom(:,:,iblk),  &
+                             rside(:,:,iblk),    Cdn_ocn (:,:,iblk), &
+                             fside (:,:,  iblk) )
+
+
+
       !-----------------------------------------------------------------
       ! Update the neutral drag coefficients to account for form drag
       ! Oceanic and atmospheric drag coefficients
@@ -599,7 +589,8 @@
                                 TLAT(istop,jstop,iblk)*rad_to_deg, &
                                 TLON(istop,jstop,iblk)*rad_to_deg
                write(nu_diag,*) 'aice:', &
-                                aice(istop,jstop,iblk)
+                                aice(istop,jstop,iblk),fbottom(istop,jstop,iblk),&
+                                Tbotn(istop,jstop), frzmlt(istop,jstop,iblk), sst(istop,jstop,iblk)
                write(nu_diag,*) 'n: ',n, 'aicen: ', &
                                 aicen(istop,jstop,n,iblk)
             endif
@@ -822,9 +813,6 @@
          enddo                  ! ncat
 
 
-!        call check_mfstd (nx_block, ny_block,ncat,nfsd,aicen(:,:,:,iblk), &
-!                               trcrn(:,:,:,:,iblk),'after thermo block in step_therm1')
-
       !-----------------------------------------------------------------
       ! Calculate ponds from the topographic scheme
       !-----------------------------------------------------------------
@@ -877,25 +865,22 @@
       use ice_therm_shared, only: heat_capacity
       use ice_therm_vertical, only: phi_init, dSin0_frazil
       use ice_timers, only: ice_timer_start, ice_timer_stop, timer_catconv, &
-                            timer_merge, timer_latmelt, & ! LR
+                            timer_weld, timer_latmelt, & ! LR
                             timer_addnewice               ! LR
 
       use ice_zbgc_shared, only: first_ice
 ! LR CMB
-      use ice_flux, only: rside_itd, flateral, &
-                          lead_area, latsurf_area, vlateral, &
-                          sst, Tf, &
-                          G_radial, wave_spectrum, wave_hs_in_ice                
-       use ice_fsd, only:icepack_renormfsd, &
-                         icepack_mergefsd, &
-                         d_afsd_latg, d_amfstd_latg, d_an_latg, &
-                         d_afsd_addnew, d_amfstd_addnew, d_an_addnew, &
-                         d_afsd_latm, d_amfstd_latm, d_an_latm, &
-                         d_afsd_merge, d_amfstd_merge
+      use ice_flux, only: rside, fside, &
+                          sst, Tf, dwavefreq, &
+                          wave_spectrum, wave_sig_ht   
+       use ice_fsd, only:icepack_weldfsd, icepack_cleanup_fsdn,&
+                         d_afsd_latg, &
+                         d_afsd_newi, &
+                         d_afsd_latm, &
+                         d_afsd_weld
       use ice_domain_size, only: nfsd, nilyr, nfreq
       use ice_grid, only: tarea
       use ice_state, only: nt_fsd, nt_Tsfc, vice, nt_qice
-      use ice_wavefracspec, only: wave_spec
 ! LR CMB
 
       real (kind=dbl_kind), intent(in) :: &
@@ -925,14 +910,7 @@
       integer (kind=int_kind) :: &
          istop, jstop    ! indices of grid cell where model aborts
 
-! LR
-      real (kind=dbl_kind), dimension (nx_block, ny_block, ncat) :: &
-         aicen_save
 
-      real (kind=dbl_kind), dimension (nx_block, ny_block, nfsd, ncat) :: &
-        amfstd_save
-
-! LR
 
       l_stop = .false.
       
@@ -941,6 +919,17 @@
          ihi = this_block%ihi
          jlo = this_block%jlo
          jhi = this_block%jhi
+
+         ! significant wave height for FSD
+         !if (tr_fsd) then
+         wave_sig_ht(:,:,iblk) = c0
+         do j = 1, ny_block
+         do i = 1, nx_block
+         if (ANY(wave_spectrum(i,j,:,iblk).gt.1e10)) wave_spectrum(i,j,:,iblk) = c0
+         wave_sig_ht(i,j,iblk) = c4*SQRT(SUM(wave_spectrum(i,j,:,iblk)*dwavefreq(:)))
+         end do
+         end do
+         !end if
 
       !-----------------------------------------------------------------
       ! Let rain drain through to the ocean.
@@ -1036,10 +1025,8 @@
          enddo               ! i
          enddo               ! j
 
-! LR
-
          call ice_timer_start(timer_addnewice, iblk)
-
+ 
          call add_new_ice (nx_block,  ny_block,     &
                            ntrcr,     icells,               &
                            indxi,     indxj,                &
@@ -1051,7 +1038,6 @@
                            aice      (:,:,  iblk),          &
                            frzmlt    (:,:,  iblk),          &
                            frazil    (:,:,  iblk),          &
-                           vlateral(:,:,iblk),              &
                            frz_onset (:,:,  iblk), yday,    &
                            update_ocn_f,                    &
                            fresh     (:,:,  iblk),          &
@@ -1069,21 +1055,15 @@
                            ocean_bio (:,:,1:nbtrcr,iblk),   &
                            l_stop,                          &
                            istop                 , jstop,   &
-                           d_an_latg(:,:,:,iblk),           &
-                           d_an_addnew(:,:,:,iblk),         &
                            d_afsd_latg(:,:,:,iblk),         &
-                           d_afsd_addnew(:,:,:,iblk),       &
-                           d_amfstd_latg(:,:,:,:,iblk),     &
-                           d_amfstd_addnew(:,:,:,:,iblk),   &
-                           G_radial(:,:,iblk),              &
-                           tarea(:,:,iblk),                 &
+                           d_afsd_newi(:,:,:,iblk),       &
                            wave_spectrum(:,:,:,iblk),       &
-                           wave_hs_in_ice(:,:,iblk) )        
+                           wave_sig_ht(:,:,iblk)            ) 
 
 
          call ice_timer_stop(timer_addnewice, iblk)
 
-! LR
+
         if (l_stop) then
             write (nu_diag,*) 'istep1, my_task, iblk =', &
                                istep1, my_task, iblk
@@ -1102,12 +1082,8 @@
 ! LR
         call ice_timer_start(timer_latmelt, iblk)
 
-        aicen_save = aicen(:,:,:,iblk)
 
-        if (tr_fsd) amfstd_save = trcrn(:,:,nt_fsd:nt_fsd+nfsd-1,:,iblk)
-
-        call lateral_melt ( &
-                            nx_block, ny_block,    &
+        call lateral_melt ( nx_block, ny_block,    &
                             ilo, ihi, jlo, jhi,     &
                             dt,                     &
                             fpond     (:,:,  iblk), &
@@ -1115,52 +1091,35 @@
                             fsalt     (:,:,  iblk), &    
                             fhocn     (:,:,  iblk), &
                             faero_ocn (:,:,:,iblk), &
-                            rside     (:,:,iblk),   &
+                            rside     (:,:,  iblk), &
                             meltl     (:,:,  iblk), &
+                            fside     (:,:,  iblk), &
+                            sss       (:,:,  iblk), &
                             aicen     (:,:,:,iblk), &
                             vicen     (:,:,:,iblk), &
                             vsnon     (:,:,:,iblk), &
                             trcrn     (:,:,:,:,iblk), &
-                            flateral  (:,:,iblk),   & ! computed in therm1
-                            frzmlt    (:,:,iblk),   &
-                            sss       (:,:,iblk),   &
                             dSin0_frazil, phi_init, &
                             salinz(:,:,:,iblk)    , &
-                            G_radial(:,:,iblk)  )
+                            d_afsd_latm(:,:,:,iblk)  )
                  
-        if (tr_fsd) then
-                              d_amfstd_latm(:,:,:,:,iblk) = &
-                                 trcrn(:,:,nt_fsd:nt_fsd+nfsd-1,:,iblk) - amfstd_save
-                              do k=1,nfsd
-                                d_afsd_latm(:,:,k,iblk) = c0
-                                do n=1,ncat
-                                        d_afsd_latm(:,:,k,iblk) = d_afsd_latm(:,:,k,iblk)  + &
-                                        (aicen(:,:,n,iblk)*trcrn(:,:,nt_fsd+k-1,n,iblk) - &
-                                        aicen_save(:,:,n) * amfstd_save(:,:,k,n) )
-                                end do
-                              end do
-        end if ! tr_fsd                          
-                                          
-        d_an_latm(:,:,:,iblk) = aicen(:,:,:,iblk) - aicen_save
-
         call ice_timer_stop(timer_latmelt, iblk)
-        call ice_timer_start(timer_merge, iblk)
+        call ice_timer_start(timer_weld, iblk)
+
 
         if (tr_fsd) then        
-
-                call icepack_mergefsd (                 &
+                call icepack_weldfsd (                 &
                            iblk, nx_block, ny_block,    &
                            icells, indxi, indxj,        &
                            dt, aicen (:,:,:,iblk),      &
                            frzmlt    (:,:,  iblk),          &
                            trcrn     (:,:,nt_fsd:nt_fsd+nfsd-1,:,iblk),&
-                           d_afsd_merge(:,:,:,iblk), &
-                           d_amfstd_merge(:,:,:,:,iblk) )  
-
+                           d_afsd_weld(:,:,:,iblk))
        
         end if  
 
-        call ice_timer_stop(timer_merge, iblk)
+
+        call ice_timer_stop(timer_weld, iblk)
 ! LR
 
       !-----------------------------------------------------------------
@@ -1212,6 +1171,23 @@
                                   this_block%j_glob(jstop) 
             call abort_ice ('ice: ITD cleanup error in step_therm2')
          endif
+
+         ! LR may remove
+         if (tr_fsd) then
+            do j = jlo, jhi
+            do i = ilo, ihi
+               do n = 1, ncat
+               if (aicen(i,j,n,iblk) > puny) then  
+                  call icepack_cleanup_fsdn(trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk))
+               else
+                  trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,n,iblk) = c0
+               endif
+               enddo
+            enddo               ! i
+            enddo               ! j
+         end if
+
+
 
       end subroutine step_therm2
 
@@ -1364,7 +1340,6 @@
       !$OMP END PARALLEL DO
 
       call ice_timer_stop(timer_ridge)
-
       !-------------------------------------------------------------------
       ! Ghost cell updates for state variables.
       !-------------------------------------------------------------------

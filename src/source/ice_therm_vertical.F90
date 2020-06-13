@@ -638,8 +638,8 @@
                                         sst,      Tf,       &
                                         strocnxT, strocnyT, &
                                         Tbot,     fbot,     &
-                                        fside,    rside,    &
-                                        Cdn_ocn    )
+                                        rside,    Cdn_ocn,  &
+                                        fside)
 
        use ice_state, only: nt_fsd, tr_fsd
        use ice_fsd, only: floe_rad_c
@@ -675,7 +675,7 @@
          Tbot    , & ! ice bottom surface temperature (deg C)
          fbot    , & ! heat flux to ice bottom  (W/m^2)
          rside   , & ! fraction of ice that melts laterally
-         fside       ! lateral heat flux (W/m^2) !LR
+         fside       ! lateral heat flux (W/m^2)
 
       ! local variables
 
@@ -782,21 +782,14 @@
       !    Steele (1992): JGR, 97, 17,729-17,738
       !-----------------------------------------------------------------
 
-        wlat(i,j) = m1 * deltaT**m2 ! Maykut & Perovich
-
-
-        if (.NOT.tr_fsd) then ! assuming all floes are 300 m, compute rside
-            
-            rside(i,j) = wlat(i,j)*dt*pi/(floeshape*floediam) ! Steele
+         wlat(i,j) = m1 * deltaT**m2 ! Maykut & Perovich
+         rside(i,j) = wlat(i,j)*dt*pi/(floeshape*floediam) ! Steele
          rside(i,j) = max(c0,min(rside(i,j),c1))
-
-        end if ! tr_fsd
 
       enddo                     ! ij
 
       !-----------------------------------------------------------------
-      ! Compute heat flux associated with this value of rside (no FSD)
-      ! or wlat (with FSD)
+      ! Compute heat flux associated with this value of rside.
       !-----------------------------------------------------------------
 
       do n = 1, ncat
@@ -842,7 +835,6 @@
          do ij = 1, imelt
             i = indxi(ij)
             j = indxj(ij)
-            ! lateral heat flux
             if (tr_fsd) then
                 ! directly from lateral melt rate
                 ! NB this uses enthalphy averaged for all thickness categories
@@ -868,14 +860,14 @@
 
          xtmp = frzmlt(i,j)/(fbot(i,j) + fside(i,j) + puny) 
          xtmp = min(xtmp, c1)
-         fbot (i,j) = fbot (i,j) * xtmp
-! LR
+         fbot  (i,j) = fbot  (i,j) * xtmp
+         rside (i,j) = rside (i,j) * xtmp
          fside (i,j) = fside (i,j) * xtmp
-! LR
-         rside(i,j) = rside(i,j) * xtmp
       enddo                     ! ij
 
       deallocate(etot)
+      deallocate(qavg)
+
 
       end subroutine frzmlt_bottom_lateral
 
