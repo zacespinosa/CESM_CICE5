@@ -4210,7 +4210,7 @@
                  if (n_yieldstress22     (ns) /= 0) a2D(i,j,n_yieldstress22(ns),iblk)      = &
                        yieldstress22 (i,j,iblk)*avail_hist_fields(n_yieldstress22(ns))%cona
                  if (n_wavespectrum (ns) /= 0) a2D(i,j,n_wavespectrum(ns), iblk) = &
-                     wave_spectrum(i,j,25,iblk)*avail_hist_fields(n_wavespectrum(ns))%cona
+                     wave_spectrum(i,j,1,iblk)*avail_hist_fields(n_wavespectrum(ns))%cona
               endif
            enddo                ! i
            enddo                ! j

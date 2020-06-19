@@ -1372,6 +1372,7 @@
                                 c2 * G_radial(i,j) * afsd_tmp(k) * &
                                 (c1/floe_rad_c(k) - tmp)
                          end do
+                         WHERE(abs(d_afsd_tmp).lt.puny) d_afsd_tmp = c0
 
                          ! timestep required for this
                          subdt = get_subdt_fsd(nfsd, afsd_tmp(:), d_afsd_tmp(:))

@@ -273,11 +273,6 @@
             totfrac = totfrac + afsd(k)
         enddo
 
-        ! LR remove
-        !afsd(:) = c0
-        !afsd(1) = c1
-
-
         do k = 1, nfsd 
             afsdn(:,:,k,:) = afsd(k)/totfrac
         enddo
@@ -640,9 +635,6 @@
          DO WHILE (elapsed_t.lt.dt)
         
              nsubt = nsubt + 1
-
-             ! LR need to do this properly
-             if (nsubt.gt.100) print *, 'latg not converging'
  
              ! finite differences
              df_flx(:) = c0 ! NB could stay zero if all in largest FS cat
@@ -654,7 +646,6 @@
                 df_flx(k) = f_flx(k+1) - f_flx(k)
              end do
 
-!         if (abs(sum(df_flx)) > puny) print*,'fsd_add_new ERROR df_flx /= 0'
 
              dafsd_tmp(:) = c0
              do k = 1, nfsd
@@ -662,25 +653,19 @@
                             * (c1/floe_rad_c(k) - SUM(afsdn_latg(:,n)/floe_rad_c(:))) )
 
              end do
+             WHERE (abs(dafsd_tmp).lt.puny) dafsd_tmp = c0
 
             ! timestep required for this
             subdt = get_subdt_fsd(nfsd, afsdn_latg(:,n), dafsd_tmp(:)) 
             subdt = MIN(subdt, dt)
- 
+
+
             ! update fsd and elapsed time
             afsdn_latg(:,n) = afsdn_latg(:,n) + subdt*dafsd_tmp(:)
             elapsed_t = elapsed_t + subdt
 
-            ! remove
-            if (nsubt.gt.50) then
-              print *, 'latg not converging'
-              print *, 'before ',afsdn_latg(:,n) - subdt*dafsd_tmp(:)
-              print *, 'after ',afsdn_latg(:,n)
-              print *, 'dt ',subdt
-              print *, 'delta ',dafsd_tmp(:)
-              stop 'stopping in latg'
-            end if
-
+           if (nsubt.gt.100) print *, 'warning, latg not converging ',nsubt
+            
          END DO
 
          call icepack_cleanup_fsdn (afsdn_latg(:,n))
