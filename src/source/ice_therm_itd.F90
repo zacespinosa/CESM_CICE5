@@ -2157,8 +2157,7 @@
          j = indxj2(ij)
          m = indxij2(ij)
  
-         ! not needed possibly??
-         !if (d_an_tot(i,j,n) > c0 .and. vin0new(m,n) > c0) then  ! add ice to category n
+         if (d_an_tot(i,j,n) > c0 .and. vin0new(m,n) > c0) then  ! add ice to category n
 
          area1        = aicen(i,j,n)   ! save
          vice1(ij)    = vicen(i,j,n)   ! save
@@ -2232,7 +2231,7 @@
             endif ! tr_pond
          endif ! vicen>puny
 
-         !endif ! d_an_tot
+         endif ! d_an_tot
  
       enddo !ij
 
@@ -2246,7 +2245,7 @@
             j = indxj2(ij)
             m = indxij2(ij)
 
-            !if ((vin0new(m,n).gt.c0).and.(d_an_tot(i,j,n).gt.c0) ) then
+            if ((vin0new(m,n).gt.c0).and.(d_an_tot(i,j,n).gt.c0) ) then
             if (vicen(i,j,n) > c0) then
                ! factor of nilyr cancels out
                ! enthalpy
@@ -2258,7 +2257,7 @@
               (trcrn(i,j,nt_sice+k-1,n)*vice1(ij) &
                                    + Sprofile(m,k)*vin0new(m,n))/vicen(i,j,n)
             endif
-            !end if
+            end if
          enddo ! ij
       enddo ! k
 
