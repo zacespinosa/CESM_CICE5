@@ -2448,6 +2448,28 @@
     </values>
   </entry>
 
+  <entry id="f_fbottom">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
+  <entry id="f_fside">
+    <type>char</type>
+    <category>history</category>
+    <group>icefields_nml</group>
+    <desc>
+    </desc>
+    <values>
+      <value>mxxxx</value>
+    </values>
+  </entry>
+
   <entry id="f_wave_sig_ht">
     <type>char</type>
     <category>history</category>

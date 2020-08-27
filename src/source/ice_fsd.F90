@@ -112,7 +112,6 @@
        subroutine init_fsd_bounds
 
         use ice_domain_size, only: nfsd,ncat
-        use ice_constants, only: puny, c2
         use ice_communicate, only: my_task, master_task
         use ice_calendar, only: dt
 
@@ -226,10 +225,11 @@
 !  authors: Lettie Roach, NIWA/VUW
 
 
-      subroutine init_fsd(ice_ic, nx_block, ny_block, iblk, ncat, nfsd, afsdn)
+      subroutine init_fsd(ice_ic, nx_block, ny_block, iblk, ncat, nfsd, aicen, vicen, afsdn)
         
         use ice_state, only: nt_fsd
-        use ice_domain_size, only: max_ntrcr
+        use ice_domain, only: blocks_ice
+        use ice_blocks, only: block, get_block
 
    character(len=char_len_long), intent(in) :: &
              ice_ic           ! method of ice cover initialization
@@ -240,42 +240,78 @@
              iblk , &
              ncat, nfsd
 
+   real (kind=dbl_kind), dimension (nx_block,ny_block,ncat), &
+   intent(in) :: &
+              aicen, vicen     ! itd, vol
+
    real (kind=dbl_kind), dimension (nx_block,ny_block,nfsd,ncat), &
    intent(inout) :: &
               afsdn     ! tracer array
 
-   real (kind=dbl_kind), parameter :: alpha=2.1_dbl_kind
-    
-   real (kind=dbl_kind) :: &
-              totfrac     ! total fraction of floes 
+   real (kind=dbl_kind):: &
+              alpha,   &  ! power law coef
+              totfrac, &  ! total fraction of floes 
+              hin,     &  ! thickness in bin
+              fact,    &  ! helper for computing alpha
+              aice        ! total fraction of ice
 
-   integer (kind=int_kind) :: k
+   integer (kind=int_kind) :: k, n, i, j, &
+             ilo,ihi,jlo,jhi ! beginning and end of physical domain
 
+   type (block) :: &
+         this_block           ! block information for current block                                        
    real  (kind=dbl_kind), dimension (nfsd) :: &
              afsd,     &  ! areal distribution of floes
              num_fsd,  &  ! number distribution of floes
              frac_fsd     ! fraction distribution of floes
 
-    do k = 1, nfsd
-        afsdn(:,:,k,:) = c0
-    enddo
-
+    alpha=2.1_dbl_kind
+    afsdn(:,:,:,:) = c0
 
     if (trim(ice_ic).ne.'none') then
    
-        ! Perovich (2014)                        
-        ! fraction of ice in each floe size and thickness category
-        ! same for ALL cells (even where no ice) initially
-        totfrac = c0
-        do k = 1, nfsd
-            num_fsd(k) = (c2*floe_rad_c(k))**(-alpha-c1)
-            afsd(k) = num_fsd(k)*floe_area_c(k)*floe_binwidth(k)
-            totfrac = totfrac + afsd(k)
-        enddo
+       this_block = get_block(blocks_ice(iblk),iblk)
+       ilo = this_block%ilo
+       ihi = this_block%ihi
+       jlo = this_block%jlo
+       jhi = this_block%jhi
 
-        do k = 1, nfsd 
-            afsdn(:,:,k,:) = afsd(k)/totfrac
-        enddo
+       do j = jlo, jhi
+       do i = ilo, ihi
+
+          aice = c0
+          do n = 1,ncat
+            aice = aicen(i,j,n)
+          enddo
+          aice=max(c0,aice)
+          aice=min(c1,aice)
+          fact = c1-aice**c6
+
+          do n = 1,ncat
+             if (aicen(i,j,n) > puny) then
+                hin = vicen(i,j,n)/aicen(i,j,n)
+                alpha = c1+1.1_dbl_kind*fact*max(c0,c1- (hin/c5)**c2)
+                alpha = max(c1, alpha)
+                alpha = min(2.1_dbl_kind, alpha)
+                
+                ! Perovich (2014)                        
+                ! fraction of ice in each floe size and thickness category
+                ! same for ALL cells (even where no ice) initially
+                totfrac = c0
+                do k = 1, nfsd
+                   num_fsd(k) = (c2*floe_rad_c(k))**(-alpha-c1)
+                   afsd(k) = num_fsd(k)*floe_area_c(k)*floe_binwidth(k)
+                   totfrac = totfrac + afsd(k)
+                enddo
+                
+                do k = 1, nfsd 
+                   afsdn(i,j,k,n) = afsd(k)/totfrac
+                enddo
+                
+             endif
+          enddo
+       enddo
+       enddo
 
     endif ! ice_ic
 
