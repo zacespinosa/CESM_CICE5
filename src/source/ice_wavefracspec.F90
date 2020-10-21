@@ -132,7 +132,7 @@
  
       if (ABS(SUM(d_afsd(:))).gt.puny) stop 'area not cons, waves'
 
-      WHERE (ABS(d_afsd).lt.puny) d_afsd = c0 
+      WHERE (ABS(d_afsd).lt.(100.*puny)) d_afsd = c0 
 
 
       if (ANY(d_afsd.gt.c1+puny)) then
@@ -156,7 +156,7 @@
      use ice_blocks, only: block, get_block
      use ice_state, only: aice, aicen, vice, &
                           trcrn
-     use ice_flux, only: wave_spectrum
+     use ice_flux, only: wave_spectrum, wave_sig_ht
      use ice_fsd, only: d_afsd_wave
  
      ! local variables
@@ -186,6 +186,7 @@
             call wave_frac_fsd(aice(i,j,iblk),  vice(i,j,iblk),        & ! in 
                                aicen(i,j,:,iblk),                      & ! in
                                wave_spectrum(i,j,:,iblk),              & ! in
+                               wave_sig_ht(i,j,iblk),                & ! int
                                trcrn(i,j,nt_fsd:nt_fsd+nfsd-1,:,iblk), & ! inout
                                d_afsd_wave(i,j,:,iblk))                  ! out
  
@@ -214,6 +215,7 @@
       subroutine wave_frac_fsd(aice,  vice,        & ! in 
                               aicen,              & ! in
                               wave_spectrum,      & ! in
+                              wave_sig_ht,        & ! in
                               trcrn,              & ! inout
                               d_afsd_wave)          ! out
             
@@ -222,6 +224,7 @@
      use ice_calendar, only: dt
 
      real (kind=dbl_kind), intent(in) :: &
+         wave_sig_ht,   &
          aice,          &! ice area fraction
          vice            ! ice volume per unit area
 
@@ -290,11 +293,10 @@
 
       ! if all ice is not in first floe size category
       if (.NOT. ALL(trcrn(1,:).ge.c1-puny)) then
-   
-      ! do not try to fracture for minimal ice concentration or zero wave spectrum
-      if ((aice > p01).and.(MAXVAL(wave_spectrum(:)) > puny)) then
-         hbar = vice / aice
 
+      ! do not try to fracture for minimal ice concentration or zero wave spectrum
+      if ((aice > p01).and.(MAXVAL(wave_spectrum(:)) > puny).and.(wave_sig_ht>0.1_dbl_kind)) then
+        hbar = vice/aice
         if ((trim(wave_solver).eq.'mlclass-conv').OR.(trim(wave_solver).eq.'mlclass-1iter')&
              .OR.(trim(wave_solver).eq.'mlfullnet')) then 
          ! classify input (based on neural net run offline)
@@ -332,26 +334,19 @@
         ! if fracture occurs, evolve FSD with adaptive subtimestep
         if (MAXVAL(fracture_hist) > puny) then
 
-            ! protect against small numerical errors
-            !call icepack_cleanup_fsdn(trcrn(:,n))
-
             do n = 1, ncat
               
               afsd_init(:) = trcrn(:,n)
+              ! protect against small numerical errors
+              call icepack_cleanup_fsdn(afsd_init)
+
 
               ! if there is ice, and a FSD, and not all ice is the smallest floe size 
               if ((aicen(n) > puny) .and. (SUM(afsd_init(:)) > puny) &
-                                    .and.     (afsd_init(1) < c1)) then
+                                    .and.     (afsd_init(1) < c1-puny)) then
 
-                 afsd_tmp(:) =  afsd_init(:)
-                     if (MAXVAL(afsd_tmp) > c1+puny) then
-                       print *, 'afsd_tmp',afsd_tmp
-                       print *, 'd_afsd_tmp',d_afsd_tmp
-                       print *, &
-                        'A wb, >1 before loop'
-                       stop
-                     end if
- 
+                  afsd_tmp(:) =  afsd_init(:)
+
                   ! frac does not vary within subcycle
                   frac(:,:) = c0
                   do k = 2, nfsd
@@ -374,15 +369,21 @@
 
                      ! calculate d_afsd using current afsd
                      d_afsd_tmp = get_dafsd_wave(afsd_tmp, fracture_hist, frac)
-                    
-                     ! check in case wave fracture struggles to converge
-                     if (nsubt>100) print *, &
-                     'warning: step_wavefracture struggling to converge'
 
                      ! required timestep
                      subdt = get_subdt_fsd(nfsd, afsd_tmp, d_afsd_tmp)
                      subdt = MIN(subdt, dt)
 
+                     ! check in case wave fracture struggles to converge
+                     if (nsubt>20) then
+                         print *, 'afsd tmp ',afsd_tmp
+                         print *, 'd_afsd_tmp',d_afsd_tmp
+                         print *, 'subdt ',subdt
+                         print *, &
+                     'warning: step_wavefracture struggling to converge'
+                         EXIT
+                      end if
+ 
                      ! update afsd
                      afsd_tmp = afsd_tmp + subdt * d_afsd_tmp(:) 
 
@@ -594,7 +595,7 @@
       END DO
 
       if (iter >= max_no_iter) print *, &
-         'warning: wave_frac struggling to converge'
+         'warning B: wave_frac struggling to converge'
 
 
       end subroutine wave_frac

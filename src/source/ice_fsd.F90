@@ -307,7 +307,12 @@
                 do k = 1, nfsd 
                    afsdn(i,j,k,n) = afsd(k)/totfrac
                 enddo
-                
+              
+
+                ! LR remove
+                afsdn(i,j,:,n) = c0
+                afsdn(i,j,nfsd,n) = c1
+  
              endif
           enddo
        enddo

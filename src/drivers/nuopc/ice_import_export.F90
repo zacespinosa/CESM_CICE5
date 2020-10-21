@@ -7,11 +7,11 @@ module ice_import_export
   use shr_frz_mod        , only : shr_frz_freezetemp
   use shr_kind_mod       , only : r8 => shr_kind_r8, cl=>shr_kind_cl, cs=>shr_kind_cs 
   use ice_kinds_mod      , only : int_kind, dbl_kind, char_len_long, log_kind
-  use ice_constants      , only : c0, c1, tffresh, spval_dbl
+  use ice_constants      , only : c0, c1, tffresh, spval_dbl, puny, c2
   use ice_constants      , only : field_loc_center, field_type_scalar, field_type_vector
   use ice_blocks         , only : block, get_block, nx_block, ny_block
   use ice_domain         , only : nblocks, blocks_ice, halo_info, distrb_info
-  use ice_domain_size    , only : nx_global, ny_global, block_size_x, block_size_y, max_blocks, ncat
+  use ice_domain_size    , only : nx_global, ny_global, block_size_x, block_size_y, max_blocks, ncat, nfsd
   use ice_flux           , only : strairxt, strairyt, strocnxt, strocnyt
   use ice_flux           , only : alvdr, alidr, alvdf, alidf, Tref, Qref, Uref
   use ice_flux           , only : flat, fsens, flwout, evap, fswabs, fhocn, fswthru
@@ -25,7 +25,7 @@ module ice_import_export
   use ice_flux           , only : fiso_atm, fiso_ocn, fiso_rain, fiso_evap
   use ice_flux           , only : Qa_iso, Qref_iso, HDO_ocn, H2_18O_ocn, H2_16O_ocn
   use ice_flux           , only : wave_spectrum !HK
-  use ice_state          , only : vice, vsno, aice, aicen_init, trcr
+  use ice_state          , only : vice, vsno, aice, aicen_init, trcr, trcrn
   use ice_grid           , only : tlon, tlat, tarea, tmask, anglet, hm, ocn_gridcell_frac
   use ice_grid           , only : grid_type, t2ugrid_vector
   use ice_boundary       , only : ice_HaloUpdate
@@ -34,6 +34,8 @@ module ice_import_export
   use ice_prescribed_mod , only : prescribed_ice
   use ice_shr_methods    , only : chkerr, state_reset, state_diagnose
   use perf_mod           , only : t_startf, t_stopf, t_barrierf
+  use ice_state          , only : nt_fsd ! LR
+  use ice_fsd            , only : floe_rad_c
 
   implicit none
   public
@@ -216,6 +218,8 @@ contains
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_qref'                 )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_snowh'                )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_u10'                  )
+    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_thick'                )
+    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_floediam'             )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'inst_ice_vis_dir_albedo' )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'inst_ice_ir_dir_albedo'  )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'inst_ice_vis_dif_albedo' )
@@ -730,7 +734,7 @@ enddo
 
     ! local variables
     type(block)             :: this_block                           ! block information for current block
-    integer                 :: i, j, iblk, n                        ! incides
+    integer                 :: i, j, iblk, n, m, k                  ! incides
     integer                 :: n2                                   ! thickness category index
     integer                 :: ilo, ihi, jlo, jhi                   ! beginning and end of physical domain
     real    (kind=dbl_kind) :: workx, worky                         ! tmps for converting grid
@@ -744,6 +748,11 @@ enddo
     real    (kind=dbl_kind) :: tauxo (nx_block,ny_block,max_blocks) ! ice/ocean stress
     real    (kind=dbl_kind) :: tauyo (nx_block,ny_block,max_blocks) ! ice/ocean stress
     real    (kind=dbl_kind) :: ailohi(nx_block,ny_block,max_blocks) ! fractional ice area
+    real    (kind=dbl_kind) :: floediam(nx_block,ny_block,max_blocks) ! fractional ice area
+    real    (kind=dbl_kind) :: floethick(nx_block,ny_block,max_blocks) ! fractional ice area
+
+
+
     real    (kind=dbl_kind), allocatable :: tempfld(:,:,:)
     character(len=*),parameter :: subname = 'ice_export'
     !-----------------------------------------------------
@@ -773,6 +782,23 @@ enddo
           do i = ilo,ihi
              ! ice fraction
              ailohi(i,j,iblk) = min(aice(i,j,iblk), c1)
+
+             ! LR ice thickness (m)
+             floethick(i,j,iblk) = c0
+             if (aice(i,j,iblk).gt.puny) floethick(i,j,iblk) = vice(i,j,iblk) / aice(i,j,iblk)
+
+             ! LR floe diameter (m)
+             floediam(i,j,iblk) = c0
+             workx = c0
+             worky = c0
+             do n = 1, ncat
+             do k = 1, nfsd
+                 workx = workx + floe_rad_c(k)*aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
+                 worky = worky + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)                               
+             end do
+             end do
+             if (worky.gt.c0) workx = c2*workx / worky
+             floediam(i,j,iblk) = MAX(3.,workx) ! LR should this be 2*floe_rad_c ?
 
              ! surface temperature
              Tsrf(i,j,iblk)  = Tffresh + trcr(i,j,1,iblk)     !Kelvin (original ???)
@@ -896,6 +922,14 @@ enddo
 
     ! 2m atm reference spec humidity (kg/kg)
     call state_setexport(exportState, 'Si_qref' , input=Qref , lmask=tmask, ifrac=ailohi, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    ! Sea ice thickness (m)
+    call state_setexport(exportState, 'Si_thick' , input=floethick , lmask=tmask, ifrac=ailohi, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    ! Sea ice floe diameter (m)
+    call state_setexport(exportState, 'Si_floediam' , input=floediam , lmask=tmask, ifrac=ailohi, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     ! Snow volume
