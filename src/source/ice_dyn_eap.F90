@@ -85,7 +85,7 @@
       use ice_flux, only: rdg_conv, rdg_shear, prs_sig, strairxT, strairyT, &
           strairx, strairy, uocn, vocn, ss_tltx, ss_tlty, iceumask, fm, &
           strtltx, strtlty, strocnx, strocny, strintx, strinty, &
-          strocnxT, strocnyT, strax, stray, &
+          strocnxT, strocnyT, strax, stray, strwavx, strwavy, &
           stressp_1, stressp_2, stressp_3, stressp_4, &
           stressm_1, stressm_2, stressm_3, stressm_4, &
           stress12_1, stress12_2, stress12_3, stress12_4
@@ -256,6 +256,7 @@
                          ss_tltx   (:,:,iblk), ss_tlty   (:,:,iblk), &  
                          icetmask  (:,:,iblk), iceumask  (:,:,iblk), & 
                          fm        (:,:,iblk), dt,                   & 
+                         strwavx   (:,:,iblk), strwavy   (:,:,iblk), &
                          strtltx   (:,:,iblk), strtlty   (:,:,iblk), & 
                          strocnx   (:,:,iblk), strocny   (:,:,iblk), & 
                          strintx   (:,:,iblk), strinty   (:,:,iblk), & 

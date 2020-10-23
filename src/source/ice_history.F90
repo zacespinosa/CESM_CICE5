@@ -164,20 +164,14 @@
         f_dafsd_newi = 'x'
         f_dafsd_latm = 'x'
         f_dafsd_latg = 'x'
-        f_concforww = 'x'
-        f_diamforww = 'x'
-        f_thickforww = 'x'
         f_wavespectrum='x'
         !f_wave_sig_ht = 'x'
     end if 
 
     ! LR remove comment
      ! if (.NOT.wave_spec) then
-     !   f_concforww = 'x'
-     !   f_diamforww = 'x'
      !   f_wavespectrum='x'
      !   !f_wave_sig_ht = 'x'
-     !   f_thickforww = 'x'        
      ! end if   
 ! LR 
       if (kdyn /= 2) then
@@ -353,11 +347,10 @@
 ! LR
       call broadcast_scalar (f_fbottom, master_task)
       call broadcast_scalar (f_fside, master_task)
-      call broadcast_scalar (f_concforww, master_task)
-      call broadcast_scalar (f_diamforww, master_task)
-      call broadcast_scalar (f_thickforww, master_task)
       call broadcast_scalar (f_wavespectrum, master_task)
       call broadcast_scalar (f_wave_sig_ht, master_task)
+      call broadcast_scalar (f_strwavx, master_task)
+      call broadcast_scalar (f_strwavy, master_task)
       call broadcast_scalar (f_afsd, master_task)
       call broadcast_scalar (f_afsdn, master_task)
       call broadcast_scalar (f_fsdrad, master_task)
@@ -591,21 +584,6 @@
              "from attenuated spectrum in ice", c1, c0,         &
              ns1, f_wave_sig_ht)
  
-         call define_hist_field(n_concforww,"concforww","1",tstr2D, tcstr, &
-             "Concentration of floes > Dmin",                  &
-             "for waves", c1, c0,         &
-             ns1, f_concforww)
-
-         call define_hist_field(n_diamforww,"diamforww","1",tstr2D, tcstr, &
-             "Average (number) diameter of floes > Dmin",                  &
-             "for waves", c1, c0,         &
-             ns1, f_diamforww)
-
-         call define_hist_field(n_thickforww,"thickforww","m",tstr2D, tcstr, &
-             "Thickness of floes > Dmin",                  &
-             "for waves ", c1, c0,         &
-             ns1, f_thickforww)
-
          call define_hist_field(n_fsdrad,"fsdrad","m",tstr2D, tcstr, &
             "floe size distribution, representative radius",                  &
             " ", c1, c0, ns1, f_fsdrad)
@@ -944,6 +922,16 @@
              "SW flux thru ice to ocean",                                     &
              "weighted by ice area", c1, c0,                                  &
              ns1, f_fswthru_ai)
+ 
+         call define_hist_field(n_strwavx,"strwavx","N/m2",ustr2D, ucstr, &
+             "wav/ice stress (x)",                                       &
+             "positive is x direction on U grid", c1, c0,                &
+             ns1, f_strwavx)
+      
+         call define_hist_field(n_strwavy,"strwavy","N/m2",ustr2D, ucstr, &
+             "wav/ice stress (y)",                                       &
+             "positive is y direction on U grid", c1, c0,                &
+             ns1, f_strwavy)
       
          call define_hist_field(n_strairx,"strairx","N/m2",ustr2D, ucstr, &
              "atm/ice stress (x)",                                       &
@@ -1816,7 +1804,7 @@
           albice, albsno, albpnd, coszen, flat, fsens, flwout, evap, evapi, evaps, &
           Tair, Tref, Qref, congel, frazil, frazil_diag, snoice, dsnow, &
           melts, meltb, meltt, meltl, fresh, fsalt, fresh_ai, fsalt_ai, &
-          fhocn, fhocn_ai, uatm, vatm, &
+          fhocn, fhocn_ai, uatm, vatm, strwavx, strwavy, &
           fswthru_ai, strairx, strairy, strtltx, strtlty, strintx, strinty, &
           strocnx, strocny, fm, daidtt, dvidtt, daidtd, dvidtd, fsurf, &
           fcondtop, fsurfn, fcondtopn, flatn, fsensn, albcnt, prs_sig, &
@@ -1991,78 +1979,17 @@
          if (f_wave_sig_ht(1:1) /= 'x') &
              call accum_hist_field(n_wave_sig_ht,iblk,wave_sig_ht(:,:,iblk), a2D)
 
-         if (f_concforww (1:1) /= 'x') then
-             do j = jlo, jhi
-             do i = ilo, ihi
-                worka(i,j) = c0
-                do n = 1, ncat_hist
-                do k = 1, nfsd_hist
-                    worka(i,j) = worka(i,j) + aicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
-                end do
-                end do
-             end do
-             end do
-             call accum_hist_field(n_concforww,   iblk, worka(:,:), a2D)
-         end if
 
-         if (f_diamforww (1:1) /= 'x') then
-             do j = jlo, jhi
-             do i = ilo, ihi
-                worka(i,j) = c0
-                workb(i,j) = c0
-                do n = 1, ncat_hist
-                do k = 1, nfsd_hist
-                    ! number-mean radius, following Eqn. 5 in HT2017
-!                    worka(i,j) = worka(i,j) + (floe_rad_c(k)*aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)/floe_area_c(k))
-                    ! normalization factor
-!                    workb(i,j) = workb(i,j) + aicen_init(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)/floe_area_c(k)
-                    ! area-mean radius, following Eqn. 26 in RHDB2018
-                    worka(i,j) = worka(i,j) + floe_rad_c(k)*aicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
-                    ! normalization factor
-                    workb(i,j) = workb(i,j) + aicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
-                end do
-                end do
-                ! factor of 2 for diameter
-                if (workb(i,j).gt.0.03_dbl_kind) then
-                worka(i,j) = c2*worka(i,j)/workb(i,j)
-                worka(i,j) = max(2.*floe_rad_c(1),worka(i,j))
-                end if
-             end do
-             end do
-             call accum_hist_field(n_diamforww,   iblk, worka(:,:), a2D)
-         end if
-
-         if (f_thickforww (1:1) /= 'x') then
-             do j = jlo, jhi
-             do i = ilo, ihi
-                worka(i,j) = c0
-                workb(i,j) = c0  
-                do n = 1, ncat_hist
-                do k = 1, nfsd_hist
-                    worka(i,j) = worka(i,j) + aicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
-                    workb(i,j) = workb(i,j) + vicen(i,j,n,iblk)*trcrn(i,j,nt_fsd+k-1,n,iblk)
-                end do
-                end do
-                if (worka(i,j) > puny) then
-                      workb(i,j) = workb(i,j) / worka(i,j)
-                else
-                      workb(i,j) = c1
-                endif
-             end do
-             end do
-             call accum_hist_field(n_thickforww,   iblk, workb(:,:), a2D)  
-         end if
- 
          if (f_fsdrad(1:1) /= 'x') then
            do j = 1, ny_block
            do i = 1, nx_block
             worka(i,j) = c0            
-            if (aice(i,j,iblk) > 0.03_dbl_kind) then
+            if (aice(i,j,iblk) > puny) then
              do k = 1, nfsd_hist
                 do n = 1, ncat_hist
                   worka(i,j) = worka(i,j) &
                                + (trcrn(i,j,nt_fsd+k-1,n,iblk) * floe_rad_c(k) &
-                               * aicen(i,j,n,iblk)) !LR maybe remove /aice(i,j,iblk))
+                               * aicen(i,j,n,iblk))/aice(i,j,iblk)
                  end do
               end do
               worka(i,j) = MAX(floe_rad_c(1),worka(i,j))
@@ -2076,12 +2003,12 @@
           do j = 1, ny_block
           do i = 1, nx_block
             worka(i,j) = c0
-            if (aice(i,j,iblk) > 0.15_dbl_kind) then
+            if (aice(i,j,iblk) > puny) then
              do k = 1, nfsd_hist
                do n = 1, ncat_hist
                   worka(i,j) = worka(i,j) &
                                + (c8*floeshape*trcrn(i,j,nt_fsd+k-1,n,iblk)*floe_rad_c(k) &
-                                    *aicen(i,j,n,iblk)/(c4*floeshape*floe_rad_c(k)**2)) ! LR maybe remove*aice(i,j,iblk)))
+                                    *aicen(i,j,n,iblk)/(c4*floeshape*floe_rad_c(k)**2*aice(i,j,iblk))
                end do
               end do
             endif
@@ -2284,6 +2211,10 @@
              call accum_hist_field(n_fswthru, iblk, fswthru(:,:,iblk), a2D)
          if (f_fswthru_ai(1:1)/= 'x') &
              call accum_hist_field(n_fswthru_ai,iblk, fswthru_ai(:,:,iblk), a2D)
+          if (f_strairx(1:1) /= 'x') &
+             call accum_hist_field(n_strwavx, iblk, strwavx(:,:,iblk), a2D)
+         if (f_strairy(1:1) /= 'x') &
+             call accum_hist_field(n_strwavy, iblk, strwavy(:,:,iblk), a2D)
                
          if (f_strairx(1:1) /= 'x') &
              call accum_hist_field(n_strairx, iblk, strairx(:,:,iblk), a2D)

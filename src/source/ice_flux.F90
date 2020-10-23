@@ -357,6 +357,10 @@
           wave_spectrum     ! wave spectrum in 25 frequencies - e(f) from Wavewatch
                             ! power spectral density of surface elevation (m^2 s)
 
+      real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks), public :: &
+          strwavx, &     ! wave-ice momentum stress x and y components (N/m^2)
+          strwavy         
+
      real (kind=dbl_kind), dimension (nfreq), public :: &
           wavefreq, dwavefreq        ! freqency values and binwidths
 

@@ -203,8 +203,6 @@
            f_dafsd_latg       = 'm'                    , &
            f_fbottom         = 'm', f_fside      = 'm', &
            f_fsdrad          = 'm', f_fsdperim   = 'm', &
-           f_concforww       = 'm', f_diamforww  = 'm', &
-           f_thickforww      = 'm'                    , &
            f_wavespectrum    = 'm', f_wave_sig_ht= 'm', &
            f_hi        = 'm', f_hs         = 'm', &
            f_snowfrac  = 'x', f_snowfracn  = 'x', &
@@ -241,6 +239,7 @@
            f_fsalt     = 'm', f_fsalt_ai   = 'm', &
            f_fhocn     = 'm', f_fhocn_ai   = 'm', &
            f_fswthru   = 'm', f_fswthru_ai = 'm', &
+           f_strwavx   = 'm', f_strwavy    = 'm', &
            f_strairx   = 'm', f_strairy    = 'm', &
            f_strtltx   = 'm', f_strtlty    = 'm', &
            f_strcorx   = 'm', f_strcory    = 'm', &
@@ -352,8 +351,6 @@
            f_dafsd_latg,                    &
            f_fsdperim,     f_fsdrad,       &
            f_fbottom,      f_fside,        &
-           f_concforww,    f_diamforww,    &
-           f_thickforww,                   &
            f_wavespectrum, f_wave_sig_ht,  &
            f_hi,        f_hs       , &
            f_snowfrac,  f_snowfracn, &
@@ -390,6 +387,7 @@
            f_fsalt,     f_fsalt_ai , &
            f_fhocn,     f_fhocn_ai , &
            f_fswthru,   f_fswthru_ai,&
+           f_strwavx,   f_strwavy  , &
            f_strairx,   f_strairy  , &
            f_strtltx,   f_strtlty  , &
            f_strcorx,   f_strcory  , &
@@ -517,8 +515,6 @@
            n_dafsd_wave     , n_dafsd_weld      , &
            n_dafsd_latg                        , &
            n_fbottom       , n_fside          , &
-           n_concforww     , n_diamforww      , &
-           n_thickforww                       , &
            n_wavespectrum,   n_wave_sig_ht    , &
            n_hi         , n_hs         , &
            n_snowfrac,    n_snowfracn,   &
@@ -611,6 +607,7 @@
            n_fswthrun,   &
            n_fhocn      , n_fhocn_ai   , &
            n_fswthru    , n_fswthru_ai , &
+           n_strwavx    , n_strwavy    , &
            n_strairx    , n_strairy    , &
            n_strtltx    , n_strtlty    , &
            n_strcorx    , n_strcory    , &

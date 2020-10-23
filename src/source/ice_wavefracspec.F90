@@ -132,9 +132,6 @@
  
       if (ABS(SUM(d_afsd(:))).gt.puny) stop 'area not cons, waves'
 
-      WHERE (ABS(d_afsd).lt.(100.*puny)) d_afsd = c0 
-
-
       if (ANY(d_afsd.gt.c1+puny)) then
            print *, 'afsdinit ',afsd_init
            print *, 'loss ',loss
@@ -369,6 +366,8 @@
 
                      ! calculate d_afsd using current afsd
                      d_afsd_tmp = get_dafsd_wave(afsd_tmp, fracture_hist, frac)
+
+                     if (all(abs(d_afsd_tmp).lt.puny)) EXIT
 
                      ! required timestep
                      subdt = get_subdt_fsd(nfsd, afsd_tmp, d_afsd_tmp)

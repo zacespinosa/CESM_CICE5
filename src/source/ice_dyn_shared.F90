@@ -360,6 +360,7 @@
                             ss_tltx,    ss_tlty,    &  
                             icetmask,   iceumask,   & 
                             fm,         dt,         & 
+                            strwavx, strwavy, &
                             strtltx,    strtlty,    & 
                             strocnx,    strocny,    &
                             strintx,    strinty,    &
@@ -409,6 +410,8 @@
          fcor    , & ! Coriolis parameter (1/s)
          strairx , & ! stress on ice by air, x-direction
          strairy , & ! stress on ice by air, y-direction
+         strwavx, & ! stress on ice by waves, x-direction (N/m^2)
+         strwavy, & ! stress on ice by waves, x-direction (N/m^2)
          uocn    , & ! ocean current, x-direction (m/s)
          vocn    , & ! ocean current, y-direction (m/s)
          ss_tltx , & ! sea surface slope, x-direction (m/m)
@@ -578,8 +581,8 @@
          strtltx(i,j) = -gravit*umass(i,j)*ss_tltx(i,j)
          strtlty(i,j) = -gravit*umass(i,j)*ss_tlty(i,j)
 #endif
-         forcex(i,j) = strairx(i,j) + strtltx(i,j)
-         forcey(i,j) = strairy(i,j) + strtlty(i,j)
+         forcex(i,j) = strairx(i,j) + strtltx(i,j) + strwavx(i,j) !LR
+         forcey(i,j) = strairy(i,j) + strtlty(i,j) + strwavy(i,j) !LR
       enddo
 
       end subroutine evp_prep2

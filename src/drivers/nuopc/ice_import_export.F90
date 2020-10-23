@@ -7,7 +7,7 @@ module ice_import_export
   use shr_frz_mod        , only : shr_frz_freezetemp
   use shr_kind_mod       , only : r8 => shr_kind_r8, cl=>shr_kind_cl, cs=>shr_kind_cs 
   use ice_kinds_mod      , only : int_kind, dbl_kind, char_len_long, log_kind
-  use ice_constants      , only : c0, c1, tffresh, spval_dbl, puny, c2
+  use ice_constants      , only : c0, c1, tffresh, spval_dbl, puny, c2, rhow
   use ice_constants      , only : field_loc_center, field_type_scalar, field_type_vector
   use ice_blocks         , only : block, get_block, nx_block, ny_block
   use ice_domain         , only : nblocks, blocks_ice, halo_info, distrb_info
@@ -24,7 +24,7 @@ module ice_import_export
   use ice_flux           , only : faero_atm, faero_ocn
   use ice_flux           , only : fiso_atm, fiso_ocn, fiso_rain, fiso_evap
   use ice_flux           , only : Qa_iso, Qref_iso, HDO_ocn, H2_18O_ocn, H2_16O_ocn
-  use ice_flux           , only : wave_spectrum !HK
+  use ice_flux           , only : wave_spectrum, strwavx, strwavy !HK, LR
   use ice_state          , only : vice, vsno, aice, aicen_init, trcr, trcrn
   use ice_grid           , only : tlon, tlat, tarea, tmask, anglet, hm, ocn_gridcell_frac
   use ice_grid           , only : grid_type, t2ugrid_vector
@@ -366,7 +366,7 @@ contains
 
     ! local variables
     integer,parameter                :: nflds=15
-    integer,parameter                :: nfldv=6
+    integer,parameter                :: nfldv=8
     integer                          :: i, j, iblk, n, k
     integer                          :: ilo, ihi, jlo, jhi !beginning and end of physical domain
     type(block)                      :: this_block         ! block information for current block
@@ -536,6 +536,13 @@ enddo
     call state_getimport(importState, 'sea_surface_slope_merid', output=aflds, index=6, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
+    ! LR Get wave-ice momentum stress from wave model
+
+    call state_getimport(importState, 'wav_tauice1', output=aflds, index=7, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call state_getimport(importState, 'wav_tauice2', output=aflds, index=8, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
 
     if (.not.prescribed_ice) then
        call t_startf ('cice_imp_halo')
@@ -553,6 +560,10 @@ enddo
              vatm (i,j,iblk)   = aflds(i,j, 4,iblk)
              ss_tltx(i,j,iblk) = aflds(i,j, 5,iblk)
              ss_tlty(i,j,iblk) = aflds(i,j, 6,iblk)
+             strwavx(i,j,iblk) = rhow*aflds(i,j, 7,iblk)
+             strwavy(i,j,iblk) = rhow*aflds(i,j, 8,iblk)
+
+
           enddo  !i
        enddo     !j
     enddo        !iblk
@@ -670,6 +681,14 @@ enddo
              ss_tlty(i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) &
                                - workx*sin(ANGLET(i,j,iblk))
 
+             workx      = strwavx  (i,j,iblk)           ! wave ice stress (N/m^2)
+             worky      = strwavy  (i,j,iblk)
+             strwavx(i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) & ! convert to POP grid
+                               + worky*sin(ANGLET(i,j,iblk))
+             strwavy(i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) &
+                               - workx*sin(ANGLET(i,j,iblk))
+
+ 
              sst(i,j,iblk) = sst(i,j,iblk) - Tffresh       ! sea sfc temp (C)
 
              sss(i,j,iblk) = max(sss(i,j,iblk),c0)
@@ -692,6 +711,8 @@ enddo
        call t2ugrid_vector(vocn)
        call t2ugrid_vector(ss_tltx)
        call t2ugrid_vector(ss_tlty)
+       call t2ugrid_vector(strwavx)
+       call t2ugrid_vector(strwavy)
        call t_stopf ('cice_imp_t2u')
     end if
 
@@ -798,7 +819,7 @@ enddo
              end do
              end do
              if (worky.gt.c0) workx = c2*workx / worky
-             floediam(i,j,iblk) = MAX(3.,workx) ! LR should this be 2*floe_rad_c ?
+             floediam(i,j,iblk) = MAX(c2*floe_rad_c(1),workx) 
 
              ! surface temperature
              Tsrf(i,j,iblk)  = Tffresh + trcr(i,j,1,iblk)     !Kelvin (original ???)
