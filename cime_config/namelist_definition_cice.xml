@@ -2335,39 +2335,6 @@
   <!-- =========================== -->
   <!-- icefields_nml -->
   <!-- =========================== -->
-    <entry id="f_diamforww">
-    <type>char</type>
-    <category>history</category>
-    <group>icefields_nml</group>
-    <desc>
-    </desc>
-    <values>
-      <value>mxxxx</value>
-    </values>
-  </entry>
-
-  <entry id="f_thickforww">
-    <type>char</type>
-    <category>history</category>
-    <group>icefields_nml</group>
-    <desc>
-    </desc>
-    <values>
-      <value>mxxxx</value>
-    </values>
-  </entry>
-
- <entry id="f_concforww">
-    <type>char</type>
-    <category>history</category>
-    <group>icefields_nml</group>
-    <desc>
-    </desc>
-    <values>
-      <value>mxxxx</value>
-    </values>
-  </entry>
-
  <entry id="f_afsd">
     <type>char</type>
     <category>history</category>
