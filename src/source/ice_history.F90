@@ -2008,7 +2008,7 @@
                do n = 1, ncat_hist
                   worka(i,j) = worka(i,j) &
                                + (c8*floeshape*trcrn(i,j,nt_fsd+k-1,n,iblk)*floe_rad_c(k) &
-                                    *aicen(i,j,n,iblk)/(c4*floeshape*floe_rad_c(k)**2*aice(i,j,iblk))
+                                    *aicen(i,j,n,iblk)/(c4*floeshape*floe_rad_c(k)**2*aice(i,j,iblk)))
                end do
               end do
             endif
