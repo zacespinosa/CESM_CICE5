@@ -132,6 +132,7 @@
  
       if (ABS(SUM(d_afsd(:))).gt.puny) stop 'area not cons, waves'
 
+
       if (ANY(d_afsd.gt.c1+puny)) then
            print *, 'afsdinit ',afsd_init
            print *, 'loss ',loss
@@ -368,6 +369,7 @@
                      d_afsd_tmp = get_dafsd_wave(afsd_tmp, fracture_hist, frac)
 
                      if (all(abs(d_afsd_tmp).lt.puny)) EXIT
+                     WHERE (abs(d_afsd_tmp).lt.puny) d_afsd_tmp = c0
 
                      ! required timestep
                      subdt = get_subdt_fsd(nfsd, afsd_tmp, d_afsd_tmp)
@@ -385,6 +387,7 @@
  
                      ! update afsd
                      afsd_tmp = afsd_tmp + subdt * d_afsd_tmp(:) 
+                     WHERE ( afsd_tmp.lt.puny)  afsd_tmp = c0
 
                      ! check conservation and negatives
                      if (MINVAL(afsd_tmp) < -puny) print *, &
